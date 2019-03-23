@@ -1,0 +1,7 @@
+[package]
+name = "rtplot"
+version = "0.1.0"
+authors = ["ostrosco <ostrosco@fastmail.fm>"]
+edition = "2018"
+
+[dependencies]
