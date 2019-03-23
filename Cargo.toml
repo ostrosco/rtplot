@@ -5,3 +5,5 @@ authors = ["ostrosco <ostrosco@fastmail.fm>"]
 edition = "2018"
 
 [dependencies]
+lyon = "0.13"
+rusttype = "0.7"
