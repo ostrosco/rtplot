@@ -13,12 +13,13 @@ struct Vertex {
 
 implement_vertex!(Vertex, position);
 
-fn main() {
+fn calculate_sin(phase: f32) -> Vec<Vertex> {
     let mut sin_vals: Vec<_> = linspace(0.0, 100.0, 10000)
         .map(|x| Vertex {
-            position: [x as f32, (PI / 2.0 * x as f32).sin()],
+            position: [x as f32, (PI / 8.0 * x as f32 + phase).sin()],
         })
         .collect();
+
     let min_x = sin_vals
         .iter()
         .min_by(|x, y| x.position[0].partial_cmp(&y.position[0]).unwrap())
@@ -42,10 +43,16 @@ fn main() {
 
     for sin_val in sin_vals.iter_mut() {
         sin_val.position[0] =
-            (sin_val.position[0] - min_x) / (max_x - min_x) - 0.5;
+            2.0 * (sin_val.position[0] - min_x) / (max_x - min_x) - 1.0;
         sin_val.position[1] =
             (sin_val.position[1] - min_y) / (max_y - min_y) - 0.5;
     }
+    sin_vals
+}
+
+fn main() {
+    let mut phase = 0.0;
+
 
     let mut events_loop = glium::glutin::EventsLoop::new();
     let context = glium::glutin::ContextBuilder::new().with_vsync(true);
@@ -57,9 +64,6 @@ fn main() {
         .with_decorations(true)
         .with_title("lyon + glium basic example");
     let display = glium::Display::new(window, context, &events_loop).unwrap();
-
-    let vertex_buffer = glium::VertexBuffer::new(&display, &sin_vals).unwrap();
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::Points);
     let program = glium::Program::from_source(
         &display,
         VERTEX_SHADER,
@@ -68,11 +72,17 @@ fn main() {
     )
     .unwrap();
 
+
     let mut status = true;
     loop {
         if !status {
             break;
         }
+
+        let sin_vals = calculate_sin(phase);
+        let vertex_buffer = glium::VertexBuffer::new(&display, &sin_vals).unwrap();
+        let indices = glium::index::NoIndices(glium::index::PrimitiveType::Points);
+        phase += PI / 16.0;
 
         let mut target = display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
