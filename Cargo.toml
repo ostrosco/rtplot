@@ -5,6 +5,6 @@ authors = ["ostrosco <ostrosco@fastmail.fm>"]
 edition = "2018"
 
 [dependencies]
-lyon = { version = "0.13", features = ["extra"] }
 rusttype = "0.7"
 glium = "0.23"
+itertools-num = "0.1"

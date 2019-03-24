@@ -1,17 +1,10 @@
 #[macro_use]
 extern crate glium;
-extern crate lyon;
 
-use glium::Surface;
 use glium::glutin::dpi::LogicalSize;
-
-use lyon::extra::rust_logo::build_logo_path;
-use lyon::path::builder::*;
-use lyon::path::Path;
-use lyon::math::*;
-use lyon::tessellation::geometry_builder::{VertexConstructor, VertexBuffers, BuffersBuilder};
-use lyon::tessellation::{FillTessellator, FillOptions};
-use lyon::tessellation;
+use glium::Surface;
+use itertools_num::linspace;
+use std::f32::consts::PI;
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -20,62 +13,60 @@ struct Vertex {
 
 implement_vertex!(Vertex, position);
 
-
-// A very simple vertex constructor that only outputs the vertex position
-struct VertexCtor;
-impl VertexConstructor<tessellation::FillVertex, Vertex> for VertexCtor {
-    fn new_vertex(&mut self, vertex: tessellation::FillVertex) -> Vertex {
-        assert!(!vertex.position.x.is_nan());
-        assert!(!vertex.position.y.is_nan());
-        Vertex {
-            // (ugly hack) tweak the vertext position so that the logo fits roughly
-            // within the (-1.0, 1.0) range.
-            position: (vertex.position * 0.0145 - vector(1.0, 1.0)).to_array(),
-        }
-    }
-}
-
 fn main() {
+    let mut sin_vals: Vec<_> = linspace(0.0, 100.0, 10000)
+        .map(|x| Vertex {
+            position: [x as f32, (PI / 2.0 * x as f32).sin()],
+        })
+        .collect();
+    let min_x = sin_vals
+        .iter()
+        .min_by(|x, y| x.position[0].partial_cmp(&y.position[0]).unwrap())
+        .unwrap()
+        .position[0];
+    let max_x = sin_vals
+        .iter()
+        .max_by(|x, y| x.position[0].partial_cmp(&y.position[0]).unwrap())
+        .unwrap()
+        .position[0];
+    let min_y = sin_vals
+        .iter()
+        .min_by(|x, y| x.position[1].partial_cmp(&y.position[1]).unwrap())
+        .unwrap()
+        .position[1];
+    let max_y = sin_vals
+        .iter()
+        .max_by(|x, y| x.position[1].partial_cmp(&y.position[1]).unwrap())
+        .unwrap()
+        .position[1];
 
-    // Build a Path for the rust logo.
-    let mut builder = SvgPathBuilder::new(Path::builder());
-    build_logo_path(&mut builder);
-    let path = builder.build();
-
-    let mut tessellator = FillTessellator::new();
-    let mut mesh: VertexBuffers<Vertex, u16> = VertexBuffers::new();
-    tessellator
-        .tessellate_path(
-            &path,
-            &FillOptions::tolerance(0.01),
-            &mut BuffersBuilder::new(&mut mesh, VertexCtor),
-        )
-        .unwrap();
-
-    println!(
-        " -- fill: {} vertices {} indices",
-        mesh.vertices.len(),
-        mesh.indices.len()
-    );
-
-
+    for sin_val in sin_vals.iter_mut() {
+        sin_val.position[0] =
+            (sin_val.position[0] - min_x) / (max_x - min_x) - 0.5;
+        sin_val.position[1] =
+            (sin_val.position[1] - min_y) / (max_y - min_y) - 0.5;
+    }
 
     let mut events_loop = glium::glutin::EventsLoop::new();
     let context = glium::glutin::ContextBuilder::new().with_vsync(true);
     let window = glium::glutin::WindowBuilder::new()
-        .with_dimensions(LogicalSize { width: 400.0, height: 400.0 })
+        .with_dimensions(LogicalSize {
+            width: 400.0,
+            height: 400.0,
+        })
         .with_decorations(true)
         .with_title("lyon + glium basic example");
     let display = glium::Display::new(window, context, &events_loop).unwrap();
 
-    let vertex_buffer = glium::VertexBuffer::new(&display, &mesh.vertices).unwrap();
-    let indices = glium::IndexBuffer::new(
+    let vertex_buffer = glium::VertexBuffer::new(&display, &sin_vals).unwrap();
+    let indices = glium::index::NoIndices(glium::index::PrimitiveType::Points);
+    let program = glium::Program::from_source(
         &display,
-        glium::index::PrimitiveType::TrianglesList,
-        &mesh.indices,
-    ).unwrap();
-    let program = glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None)
-        .unwrap();
+        VERTEX_SHADER,
+        FRAGMENT_SHADER,
+        None,
+    )
+    .unwrap();
 
     let mut status = true;
     loop {
@@ -85,13 +76,15 @@ fn main() {
 
         let mut target = display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
-        target.draw(
-            &vertex_buffer,
-            &indices,
-            &program,
-            &glium::uniforms::EmptyUniforms,
-            &Default::default(),
-        ).unwrap();
+        target
+            .draw(
+                &vertex_buffer,
+                &indices,
+                &program,
+                &glium::uniforms::EmptyUniforms,
+                &Default::default(),
+            )
+            .unwrap();
 
         target.finish().unwrap();
 
@@ -99,19 +92,23 @@ fn main() {
             use glium::glutin::{Event, WindowEvent};
             match event {
                 Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::Destroyed => { status = false }
+                    WindowEvent::Destroyed => status = false,
                     WindowEvent::KeyboardInput {
-                        input: glium::glutin::KeyboardInput { virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape), .. },
+                        input:
+                            glium::glutin::KeyboardInput {
+                                virtual_keycode:
+                                    Some(glium::glutin::VirtualKeyCode::Escape),
+                                ..
+                            },
                         ..
-                    } => { status = false }
+                    } => status = false,
                     _ => (),
-                }
+                },
                 _ => (),
             }
         });
     }
 }
-
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
@@ -120,7 +117,6 @@ pub static VERTEX_SHADER: &'static str = r#"
 
     void main() {
         gl_Position = vec4(position, 0.0, 1.0);
-        gl_Position.y *= -1.0;
     }
 "#;
 
@@ -130,7 +126,6 @@ pub static FRAGMENT_SHADER: &'static str = r#"
     out vec4 color;
 
     void main() {
-        color = vec4(0.0, 0.0, 0.0, 1.0);
+        color = vec4(1.0, 0.0, 0.0, 1.0);
     }
 "#;
-
