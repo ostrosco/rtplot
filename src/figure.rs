@@ -39,6 +39,7 @@ pub struct Figure {
     pub events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     program: glium::Program,
+    vertex_buffer: glium::VertexBuffer<Vertex>,
 }
 
 impl Figure {
@@ -62,11 +63,13 @@ impl Figure {
             None,
         )
         .unwrap();
+        let vertex_buffer = glium::VertexBuffer::empty_dynamic(&display, 30000).unwrap();
 
         Figure {
             events_loop,
             display,
             program,
+            vertex_buffer,
         }
     }
 
@@ -102,18 +105,16 @@ impl Figure {
             vertices.push(Vertex::new(x, y));
         }
 
-        // Initialize a new vertex buffer. We could eventually use a single
-        // buffer and update it as needed, but I need to know if the use case
-        // is such where we should expect the same size data each iteration.
-        let vertex_buffer =
-            glium::VertexBuffer::new(&self.display, &vertices).unwrap();
+        self.vertex_buffer.invalidate();
+        let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
+        vb.write(&vertices);
         let indices =
             glium::index::NoIndices(glium::index::PrimitiveType::Points);
         let mut target = self.display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
         target
             .draw(
-                &vertex_buffer,
+                &self.vertex_buffer,
                 &indices,
                 &self.program,
                 &glium::uniforms::EmptyUniforms,
