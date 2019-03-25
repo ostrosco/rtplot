@@ -73,8 +73,7 @@ impl Figure {
         }
     }
 
-    /// Take an array of points and draw it to the screen.
-    pub fn plot(&mut self, points: Vec<(f32, f32)>) {
+    fn normalize(points: &[(f32, f32)]) -> Vec<Vertex> {
         // Grab the min and max points of the data and normalize it to fix onto
         // the screen.
         let min_x = points
@@ -104,7 +103,12 @@ impl Figure {
             let y = (point.1 - min_y) / (max_y - min_y) - 0.5;
             vertices.push(Vertex::new(x, y));
         }
+        vertices
+    }
 
+    /// Take an array of points and draw it to the screen.
+    pub fn plot(&mut self, points: Vec<(f32, f32)>) {
+        let vertices = Figure::normalize(&points);
         self.vertex_buffer.invalidate();
         let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
         vb.write(&vertices);
