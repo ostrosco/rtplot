@@ -22,11 +22,12 @@ fn main() {
         }
 
         let sin_vals = calculate_sin(phase);
-        figure.plot(sin_vals);
+        figure.plot(&sin_vals);
         phase += PI / 20.0;
 
         figure.events_loop.poll_events(|event| {
             use glium::glutin::{Event, WindowEvent};
+            #[allow(clippy::single_match)]
             match event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::Destroyed => status = false,
