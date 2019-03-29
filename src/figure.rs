@@ -42,6 +42,12 @@ pub struct Figure {
     vertex_buffer: glium::VertexBuffer<Vertex>,
 }
 
+impl Default for Figure {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Figure {
     pub fn new() -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
@@ -63,7 +69,8 @@ impl Figure {
             None,
         )
         .unwrap();
-        let vertex_buffer = glium::VertexBuffer::empty_dynamic(&display, 30000).unwrap();
+        let vertex_buffer =
+            glium::VertexBuffer::empty_dynamic(&display, 30000).unwrap();
 
         Figure {
             events_loop,
@@ -107,7 +114,7 @@ impl Figure {
     }
 
     /// Take an array of points and draw it to the screen.
-    pub fn plot(&mut self, points: Vec<(f32, f32)>) {
+    pub fn plot(&mut self, points: &[(f32, f32)]) {
         let vertices = Figure::normalize(&points);
         self.vertex_buffer.invalidate();
         let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
