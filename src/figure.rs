@@ -42,6 +42,8 @@ pub struct Figure {
     vertex_buffer: glium::VertexBuffer<Vertex>,
 }
 
+unsafe impl Send for Figure {}
+
 impl Default for Figure {
     fn default() -> Self {
         Self::new()
