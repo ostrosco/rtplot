@@ -37,22 +37,23 @@ impl Vertex {
     }
 }
 
-pub struct Figure {
+pub struct Figure<T> {
     pub events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     program: glium::Program,
     vertex_buffer: glium::VertexBuffer<Vertex>,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-unsafe impl Send for Figure {}
+unsafe impl<T> Send for Figure<T> {}
 
-impl Default for Figure {
+impl<T> Default for Figure<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Figure {
+impl<T> Figure<T> {
     pub fn new() -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
         let context = glium::glutin::ContextBuilder::new().with_vsync(true);
@@ -81,12 +82,18 @@ impl Figure {
             display,
             program,
             vertex_buffer,
+            _phantom: Default::default(),
         }
     }
 
-    fn normalize(points: &[(f32, f32)]) -> Vec<Vertex> {
+    fn normalize(points: &[(T, T)]) -> Vec<Vertex>
+    where
+        T: Into<f32> + Copy,
+    {
         // Grab the min and max points of the data and normalize it to fix onto
         // the screen.
+        let points: Vec<(f32, f32)> =
+            points.iter().map(|x| (x.0.into(), x.1.into())).collect();
         let min_x = points
             .iter()
             .min_by(|x, y| x.0.partial_cmp(&y.0).unwrap())
@@ -117,9 +124,7 @@ impl Figure {
         vertices
     }
 
-    /// Take an array of points and draw it to the screen.
-    pub fn plot_xy(&mut self, points: &[(f32, f32)]) {
-        let vertices = Figure::normalize(&points);
+    fn draw(&mut self, vertices: &[Vertex]) {
         self.vertex_buffer.invalidate();
         let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
         vb.write(&vertices);
@@ -140,19 +145,34 @@ impl Figure {
         target.finish().unwrap();
     }
 
-    /// Take an array of y coordinates, interpolate the x, and then plot.
-    pub fn plot_y(&mut self, y_coords: &[f32]) {
-        let x_coords = linspace(-0.5, 0.5, y_coords.len());
-        let points: Vec<(f32, f32)> = x_coords
-            .zip(y_coords.iter())
-            .map(|(x, y)| (x, *y))
-            .collect();
-        self.plot_xy(&points);
+    /// Take an array of points and draw it to the screen.
+    pub fn plot_xy(&mut self, points: &[(T, T)])
+    where
+        T: Into<f32> + Copy,
+    {
+        let vertices = Figure::normalize(&points);
+        self.draw(&vertices);
     }
 
-    pub fn plot_complex(&mut self, coords: &[Complex<f32>]) {
-        let points: Vec<(f32, f32)> =
-            coords.iter().map(|x| (x.re, x.im)).collect();
+    /// Take an array of y coordinates, interpolate the x, and then plot.
+    pub fn plot_y(&mut self, y_coords: &[T])
+    where
+        T: Into<f32> + Copy,
+    {
+        let x_coords = linspace(-0.5f32, 0.5f32, y_coords.len());
+        let points: Vec<(f32, f32)> = x_coords
+            .zip(y_coords.iter())
+            .map(|(x, y)| (x, (*y).into()))
+            .collect();
+        let vertices = Figure::normalize(&points);
+        self.draw(&vertices);
+    }
+
+    pub fn plot_complex(&mut self, coords: &[Complex<T>])
+    where
+        T: Into<f32> + Copy,
+    {
+        let points: Vec<(T, T)> = coords.iter().map(|x| (x.re, x.im)).collect();
         self.plot_xy(&points);
     }
 }
