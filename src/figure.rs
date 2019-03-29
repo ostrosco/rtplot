@@ -2,6 +2,7 @@ use glium::glutin::dpi::LogicalSize;
 use glium::implement_vertex;
 use glium::Surface;
 use itertools_num::linspace;
+use num::Complex;
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
@@ -145,8 +146,13 @@ impl Figure {
         let points: Vec<(f32, f32)> = x_coords
             .zip(y_coords.iter())
             .map(|(x, y)| (x, *y))
-
             .collect();
+        self.plot_xy(&points);
+    }
+
+    pub fn plot_complex(&mut self, coords: &[Complex<f32>]) {
+        let points: Vec<(f32, f32)> =
+            coords.iter().map(|x| (x.re, x.im)).collect();
         self.plot_xy(&points);
     }
 }
