@@ -1,6 +1,7 @@
 use glium::glutin::dpi::LogicalSize;
 use glium::implement_vertex;
 use glium::Surface;
+use itertools_num::linspace;
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
@@ -116,7 +117,7 @@ impl Figure {
     }
 
     /// Take an array of points and draw it to the screen.
-    pub fn plot(&mut self, points: &[(f32, f32)]) {
+    pub fn plot_xy(&mut self, points: &[(f32, f32)]) {
         let vertices = Figure::normalize(&points);
         self.vertex_buffer.invalidate();
         let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
@@ -136,5 +137,16 @@ impl Figure {
             .unwrap();
 
         target.finish().unwrap();
+    }
+
+    /// Take an array of y coordinates, interpolate the x, and then plot.
+    pub fn plot_y(&mut self, y_coords: &[f32]) {
+        let x_coords = linspace(-0.5, 0.5, y_coords.len());
+        let points: Vec<(f32, f32)> = x_coords
+            .zip(y_coords.iter())
+            .map(|(x, y)| (x, *y))
+
+            .collect();
+        self.plot_xy(&points);
     }
 }

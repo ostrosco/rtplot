@@ -2,9 +2,9 @@ use itertools_num::linspace;
 use rtplot::figure::Figure;
 use std::f32::consts::PI;
 
-fn calculate_sin(phase: f32) -> Vec<(f32, f32)> {
+fn calculate_sin(phase: f32) -> Vec<f32> {
     let sin_vals: Vec<_> = linspace(0.0, 100.0, 10000)
-        .map(|x| (x as f32, (PI / 8.0 * x as f32 + phase).sin()))
+        .map(|x| (PI / 8.0 * x as f32 + phase).sin())
         .collect();
 
     sin_vals
@@ -22,7 +22,7 @@ fn main() {
         }
 
         let sin_vals = calculate_sin(phase);
-        figure.plot(&sin_vals);
+        figure.plot_y(&sin_vals);
         phase += PI / 20.0;
 
         figure.events_loop.poll_events(|event| {
