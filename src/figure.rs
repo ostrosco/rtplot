@@ -75,7 +75,7 @@ impl<T> Figure<T> {
         )
         .unwrap();
         let vertex_buffer =
-            glium::VertexBuffer::empty_dynamic(&display, 30000).unwrap();
+            glium::VertexBuffer::empty_dynamic(&display, 300000).unwrap();
 
         Figure {
             events_loop,
