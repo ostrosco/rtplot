@@ -15,7 +15,7 @@ fn main() {
     let mut phase = 0.0;
     let mut status = true;
     let handle = thread::spawn(move || {
-        let mut figure = Figure::new();
+        let mut figure = Figure::new().init_renderer();
         loop {
             if !status {
                 break;
@@ -25,7 +25,11 @@ fn main() {
             figure.plot_y(&sin_vals);
             phase += PI / 20.0;
 
-            figure.events_loop.poll_events(|event| {
+            let events_loop = match figure.renderer {
+                Some(ref mut rend) => &mut rend.events_loop,
+                None => panic!("uninitialized renderer"),
+            };
+            events_loop.poll_events(|event| {
                 use glium::glutin::{Event, WindowEvent};
                 #[allow(clippy::single_match)]
                 match event {

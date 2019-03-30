@@ -37,23 +37,14 @@ impl Vertex {
     }
 }
 
-pub struct Figure<T> {
+pub struct Renderer {
     pub events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     program: glium::Program,
     vertex_buffer: glium::VertexBuffer<Vertex>,
-    _phantom: std::marker::PhantomData<T>,
 }
 
-unsafe impl<T> Send for Figure<T> {}
-
-impl<T> Default for Figure<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T> Figure<T> {
+impl Renderer {
     pub fn new() -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
         let context = glium::glutin::ContextBuilder::new().with_vsync(true);
@@ -77,13 +68,60 @@ impl<T> Figure<T> {
         let vertex_buffer =
             glium::VertexBuffer::empty_dynamic(&display, 300000).unwrap();
 
-        Figure {
+        Renderer {
             events_loop,
             display,
             program,
             vertex_buffer,
+        }
+    }
+
+    pub fn draw(&mut self, vertices: &[Vertex]) {
+        self.vertex_buffer.invalidate();
+        let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
+        vb.write(&vertices);
+        let indices =
+            glium::index::NoIndices(glium::index::PrimitiveType::Points);
+        let mut target = self.display.draw();
+        target.clear_color(0.8, 0.8, 0.8, 1.0);
+        target
+            .draw(
+                &self.vertex_buffer,
+                &indices,
+                &self.program,
+                &glium::uniforms::EmptyUniforms,
+                &Default::default(),
+            )
+            .unwrap();
+
+        target.finish().unwrap();
+    }
+}
+
+pub struct Figure<T> {
+    pub renderer: Option<Renderer>,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+unsafe impl<T> Send for Figure<T> {}
+
+impl<T> Default for Figure<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T> Figure<T> {
+    pub fn new() -> Self {
+        Figure {
+            renderer: None,
             _phantom: Default::default(),
         }
+    }
+
+    pub fn init_renderer(mut self) -> Self {
+        self.renderer = Some(Renderer::new());
+        self
     }
 
     fn normalize(points: &[(T, T)]) -> Vec<Vertex>
@@ -118,9 +156,9 @@ impl<T> Figure<T> {
         let mut vertices = vec![];
         for point in points {
             let x = if max_x != min_x {
-                1.8 * (point.0 - min_x) / (max_x - min_x) - 0.9
+                2.0 * (point.0 - min_x) / (max_x - min_x) - 1.0
             } else {
-                1.8 * point.0 - 0.9
+                2.0 * point.0 - 1.0
             };
             let y = if max_y != min_y {
                 0.8 * (point.1 - min_y) / (max_y - min_y) - 0.4
@@ -132,26 +170,6 @@ impl<T> Figure<T> {
         vertices
     }
 
-    fn draw(&mut self, vertices: &[Vertex]) {
-        self.vertex_buffer.invalidate();
-        let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
-        vb.write(&vertices);
-        let indices =
-            glium::index::NoIndices(glium::index::PrimitiveType::Points);
-        let mut target = self.display.draw();
-        target.clear_color(0.8, 0.8, 0.8, 1.0);
-        target
-            .draw(
-                &self.vertex_buffer,
-                &indices,
-                &self.program,
-                &glium::uniforms::EmptyUniforms,
-                &Default::default(),
-            )
-            .unwrap();
-
-        target.finish().unwrap();
-    }
 
     /// Take an array of points and draw it to the screen.
     pub fn plot_xy(&mut self, points: &[(T, T)])
@@ -159,7 +177,10 @@ impl<T> Figure<T> {
         T: Into<f32> + Copy,
     {
         let vertices = Figure::normalize(&points);
-        self.draw(&vertices);
+        match self.renderer {
+            Some(ref mut render) => render.draw(&vertices),
+            None => panic!("Uninitialized renderer for figure"),
+        }
     }
 
     /// Take an array of y coordinates, interpolate the x, and then plot.
@@ -173,7 +194,10 @@ impl<T> Figure<T> {
             .map(|(x, y)| (x, (*y).into()))
             .collect();
         let vertices = Figure::normalize(&points);
-        self.draw(&vertices);
+        match self.renderer {
+            Some(ref mut render) => render.draw(&vertices),
+            None => panic!("Uninitialized renderer for figure"),
+        }
     }
 
     pub fn plot_complex(&mut self, coords: &[Complex<T>])
