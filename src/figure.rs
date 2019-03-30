@@ -24,7 +24,7 @@ pub static FRAGMENT_SHADER: &'static str = r#"
     }
 "#;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vertex {
     position: [f32; 2],
 }
@@ -117,8 +117,16 @@ impl<T> Figure<T> {
 
         let mut vertices = vec![];
         for point in points {
-            let x = 2.0 * (point.0 - min_x) / (max_x - min_x) - 1.0;
-            let y = (point.1 - min_y) / (max_y - min_y) - 0.5;
+            let x = if max_x != min_x {
+                1.8 * (point.0 - min_x) / (max_x - min_x) - 0.9
+            } else {
+                1.8 * point.0 - 0.9
+            };
+            let y = if max_y != min_y {
+                0.8 * (point.1 - min_y) / (max_y - min_y) - 0.4
+            } else {
+                point.1 - 0.4
+            };
             vertices.push(Vertex::new(x, y));
         }
         vertices
