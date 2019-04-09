@@ -24,7 +24,7 @@ pub static FRAGMENT_SHADER: &'static str = r#"
     }
 "#;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
     position: [f32; 2],
 }
@@ -37,14 +37,15 @@ impl Vertex {
     }
 }
 
-pub struct Renderer {
+pub struct Renderer<'a> {
     pub events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     program: glium::Program,
     vertex_buffer: glium::VertexBuffer<Vertex>,
+    draw_parameters: glium::DrawParameters<'a>,
 }
 
-impl Renderer {
+impl<'a> Renderer<'a> {
     pub fn new() -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
         let context = glium::glutin::ContextBuilder::new().with_vsync(true);
@@ -67,12 +68,17 @@ impl Renderer {
         .unwrap();
         let vertex_buffer =
             glium::VertexBuffer::empty_dynamic(&display, 300000).unwrap();
+        let draw_parameters = glium::DrawParameters {
+            point_size: Some(5.0),
+            .. Default::default()
+        };
 
         Renderer {
             events_loop,
             display,
             program,
             vertex_buffer,
+            draw_parameters,
         }
     }
 
@@ -90,7 +96,7 @@ impl Renderer {
                 &indices,
                 &self.program,
                 &glium::uniforms::EmptyUniforms,
-                &Default::default(),
+                &self.draw_parameters,
             )
             .unwrap();
 
@@ -98,20 +104,20 @@ impl Renderer {
     }
 }
 
-pub struct Figure<T> {
-    pub renderer: Option<Renderer>,
+pub struct Figure<'a, T> {
+    pub renderer: Option<Renderer<'a>>,
     _phantom: std::marker::PhantomData<T>,
 }
 
-unsafe impl<T> Send for Figure<T> {}
+unsafe impl<'a, T> Send for Figure<'a, T> {}
 
-impl<T> Default for Figure<T> {
+impl<'a, T> Default for Figure<'a, T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> Figure<T> {
+impl<'a, T> Figure<'a, T> {
     pub fn new() -> Self {
         Figure {
             renderer: None,
