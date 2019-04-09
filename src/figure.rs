@@ -67,7 +67,7 @@ impl<'a> Renderer<'a> {
         )
         .unwrap();
         let vertex_buffer =
-            glium::VertexBuffer::empty_dynamic(&display, 300000).unwrap();
+            glium::VertexBuffer::empty_dynamic(&display, 10000).unwrap();
         let draw_parameters = glium::DrawParameters {
             point_size: Some(5.0),
             .. Default::default()
@@ -88,11 +88,13 @@ impl<'a> Renderer<'a> {
         vb.write(&vertices);
         let indices =
             glium::index::NoIndices(glium::index::PrimitiveType::Points);
+
         let mut target = self.display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
+        let vb = self.vertex_buffer.slice(0..vertices.len()).unwrap();
         target
             .draw(
-                &self.vertex_buffer,
+                vb,
                 &indices,
                 &self.program,
                 &glium::uniforms::EmptyUniforms,
