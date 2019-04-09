@@ -5,7 +5,7 @@ use std::thread;
 
 fn calculate_sin(phase: f32) -> Vec<f32> {
     let sin_vals: Vec<_> = linspace(0.0, 100.0, 10000)
-        .map(|x| (PI / 8.0 * x as f32 + phase).sin())
+        .map(|x| 5.0 * (PI / 8.0 * x as f32 + phase).sin())
         .collect();
 
     sin_vals
@@ -15,7 +15,10 @@ fn main() {
     let mut phase = 0.0;
     let mut status = true;
     let handle = thread::spawn(move || {
-        let mut figure = Figure::new().init_renderer();
+        let mut figure = Figure::new()
+            .init_renderer()
+            .ylim([-2.0, 5.0])
+            .ylabel("Sin stuff");
         loop {
             if !status {
                 break;

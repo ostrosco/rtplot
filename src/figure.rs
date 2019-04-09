@@ -70,7 +70,7 @@ impl<'a> Renderer<'a> {
             glium::VertexBuffer::empty_dynamic(&display, 10000).unwrap();
         let draw_parameters = glium::DrawParameters {
             point_size: Some(5.0),
-            .. Default::default()
+            ..Default::default()
         };
 
         Renderer {
@@ -106,25 +106,27 @@ impl<'a> Renderer<'a> {
     }
 }
 
-pub struct Figure<'a, T> {
+#[derive(Default)]
+pub struct Figure<'a, T>
+where
+    T: Into<f32> + Copy,
+{
     pub renderer: Option<Renderer<'a>>,
+    xlim: Option<[f32; 2]>,
+    ylim: Option<[f32; 2]>,
+    xlabel: Option<&'a str>,
+    ylabel: Option<&'a str>,
     _phantom: std::marker::PhantomData<T>,
 }
 
-unsafe impl<'a, T> Send for Figure<'a, T> {}
+unsafe impl<'a, T> Send for Figure<'a, T> where T: Into<f32> + Send + Copy {}
 
-impl<'a, T> Default for Figure<'a, T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a, T> Figure<'a, T> {
+impl<'a, T> Figure<'a, T>
+where
+    T: Into<f32> + Copy + Default,
+{
     pub fn new() -> Self {
-        Figure {
-            renderer: None,
-            _phantom: Default::default(),
-        }
+        Self::default()
     }
 
     pub fn init_renderer(mut self) -> Self {
@@ -132,35 +134,38 @@ impl<'a, T> Figure<'a, T> {
         self
     }
 
-    fn normalize(points: &[(T, T)]) -> Vec<Vertex>
+    pub fn xlim(mut self, xlim: [f32; 2]) -> Self {
+        self.xlim = Some(xlim);
+        self
+    }
+
+    pub fn ylim(mut self, ylim: [f32; 2]) -> Self {
+        self.ylim = Some(ylim);
+        self
+    }
+
+    pub fn xlabel(mut self, xlabel: &'a str) -> Self {
+        self.xlabel = Some(xlabel);
+        self
+    }
+
+    pub fn ylabel(mut self, ylabel: &'a str) -> Self {
+        self.ylabel = Some(ylabel);
+        self
+    }
+
+    fn normalize(&self, points: &[(f32, f32)]) -> Vec<Vertex>
     where
         T: Into<f32> + Copy,
     {
-        // Grab the min and max points of the data and normalize it to fix onto
-        // the screen.
-        let points: Vec<(f32, f32)> =
-            points.iter().map(|x| (x.0.into(), x.1.into())).collect();
-        let min_x = points
-            .iter()
-            .min_by(|x, y| x.0.partial_cmp(&y.0).unwrap())
-            .unwrap()
-            .0;
-        let max_x = points
-            .iter()
-            .max_by(|x, y| x.0.partial_cmp(&y.0).unwrap())
-            .unwrap()
-            .0;
-        let min_y = points
-            .iter()
-            .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
-            .unwrap()
-            .1;
-        let max_y = points
-            .iter()
-            .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
-            .unwrap()
-            .1;
-
+        let [min_x, max_x] = match self.xlim {
+            Some(lim) => lim,
+            None => calc_xlims(points),
+        };
+        let [min_y, max_y] = match self.ylim {
+            Some(lim) => lim,
+            None => calc_ylims(points),
+        };
         let mut vertices = vec![];
         for point in points {
             let x = if max_x != min_x {
@@ -178,13 +183,14 @@ impl<'a, T> Figure<'a, T> {
         vertices
     }
 
-
     /// Take an array of points and draw it to the screen.
     pub fn plot_xy(&mut self, points: &[(T, T)])
     where
         T: Into<f32> + Copy,
     {
-        let vertices = Figure::normalize(&points);
+        let points: Vec<(f32, f32)> =
+            points.iter().map(|x| (x.0.into(), x.1.into())).collect();
+        let vertices = self.normalize(&points);
         match self.renderer {
             Some(ref mut render) => render.draw(&vertices),
             None => panic!("Uninitialized renderer for figure"),
@@ -201,7 +207,7 @@ impl<'a, T> Figure<'a, T> {
             .zip(y_coords.iter())
             .map(|(x, y)| (x, (*y).into()))
             .collect();
-        let vertices = Figure::normalize(&points);
+        let vertices = self.normalize(&points);
         match self.renderer {
             Some(ref mut render) => render.draw(&vertices),
             None => panic!("Uninitialized renderer for figure"),
@@ -215,4 +221,28 @@ impl<'a, T> Figure<'a, T> {
         let points: Vec<(T, T)> = coords.iter().map(|x| (x.re, x.im)).collect();
         self.plot_xy(&points);
     }
+}
+
+fn calc_min_max(points: &[f32]) -> [f32; 2] {
+    let min_val = points
+        .iter()
+        .min_by(|x, y| x.partial_cmp(y).unwrap())
+        .unwrap();
+    let max_val = points
+        .iter()
+        .max_by(|x, y| x.partial_cmp(y).unwrap())
+        .unwrap();
+    [*min_val, *max_val]
+}
+
+fn calc_xlims(points: &[(f32, f32)]) -> [f32; 2] {
+    let x: Vec<f32> = points.iter().map(|x| x.0).collect();
+    let xlims: [f32; 2] = calc_min_max(&x);
+    xlims
+}
+
+fn calc_ylims(points: &[(f32, f32)]) -> [f32; 2] {
+    let y: Vec<f32> = points.iter().map(|y| y.1).collect();
+    let ylims: [f32; 2] = calc_min_max(&y);
+    ylims
 }
