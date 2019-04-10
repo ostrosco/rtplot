@@ -135,11 +135,13 @@ where
         self
     }
 
+    /// Sets the x min and max limits for plotting.
     pub fn xlim(mut self, xlim: [f32; 2]) -> Self {
         self.xlim = Some(xlim);
         self
     }
 
+    /// Sets the y min and max limits for plotting.
     pub fn ylim(mut self, ylim: [f32; 2]) -> Self {
         self.ylim = Some(ylim);
         self
@@ -170,18 +172,26 @@ where
         let mut vertices = vec![];
         for point in points {
             let x = if max_x != min_x {
-                2.0 * (point.x - min_x) / (max_x - min_x) - 1.0
+                1.5 * (point.x - min_x) / (max_x - min_x) - 0.75
             } else {
-                2.0 * point.x - 1.0
+                1.5 * point.x - 0.75
             };
             let y = if max_y != min_y {
-                0.8 * (point.y - min_y) / (max_y - min_y) - 0.4
+                1.5 * (point.y - min_y) / (max_y - min_y) - 0.75
             } else {
-                point.y - 0.4
+                1.5 * point.y - 0.75
             };
             vertices.push(Vertex::new(x, y));
         }
         vertices
+    }
+
+    pub fn plot(&mut self, points: &[Point2D]) {
+        let vertices = self.normalize(&points);
+        match self.renderer {
+            Some(ref mut render) => render.draw(&vertices),
+            None => panic!("Uninitialized renderer for figure"),
+        }
     }
 
     /// Take an array of points and draw it to the screen.
@@ -190,11 +200,7 @@ where
         T: Into<f32> + Copy,
     {
         let points: Vec<Point2D> = points.iter().map(|pt| pt.into()).collect();
-        let vertices = self.normalize(&points);
-        match self.renderer {
-            Some(ref mut render) => render.draw(&vertices),
-            None => panic!("Uninitialized renderer for figure"),
-        }
+        self.plot(&points);
     }
 
     /// Take an array of y coordinates, interpolate the x, and then plot.
@@ -207,19 +213,15 @@ where
             .zip(y_coords.iter())
             .map(|(x, y)| Point2D::new(x, (*y).into()))
             .collect();
-        let vertices = self.normalize(&points);
-        match self.renderer {
-            Some(ref mut render) => render.draw(&vertices),
-            None => panic!("Uninitialized renderer for figure"),
-        }
+        self.plot(&points);
     }
 
     pub fn plot_complex(&mut self, coords: &[Complex<T>])
     where
         T: Into<f32> + Copy,
     {
-        let points: Vec<(T, T)> =
-            coords.iter().map(|pt| (pt.re, pt.im)).collect();
-        self.plot_xy(&points);
+        let points: Vec<Point2D> =
+            coords.iter().map(|pt| (pt.re, pt.im).into()).collect();
+        self.plot(&points);
     }
 }
