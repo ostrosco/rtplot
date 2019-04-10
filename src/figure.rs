@@ -1,3 +1,4 @@
+use crate::utils::{self, Point2D};
 use glium::glutin::dpi::LogicalSize;
 use glium::implement_vertex;
 use glium::Surface;
@@ -154,29 +155,29 @@ where
         self
     }
 
-    fn normalize(&self, points: &[(f32, f32)]) -> Vec<Vertex>
+    fn normalize(&self, points: &[Point2D]) -> Vec<Vertex>
     where
         T: Into<f32> + Copy,
     {
         let [min_x, max_x] = match self.xlim {
             Some(lim) => lim,
-            None => calc_xlims(points),
+            None => utils::calc_xlims(points),
         };
         let [min_y, max_y] = match self.ylim {
             Some(lim) => lim,
-            None => calc_ylims(points),
+            None => utils::calc_ylims(points),
         };
         let mut vertices = vec![];
         for point in points {
             let x = if max_x != min_x {
-                2.0 * (point.0 - min_x) / (max_x - min_x) - 1.0
+                2.0 * (point.x - min_x) / (max_x - min_x) - 1.0
             } else {
-                2.0 * point.0 - 1.0
+                2.0 * point.x - 1.0
             };
             let y = if max_y != min_y {
-                0.8 * (point.1 - min_y) / (max_y - min_y) - 0.4
+                0.8 * (point.y - min_y) / (max_y - min_y) - 0.4
             } else {
-                point.1 - 0.4
+                point.y - 0.4
             };
             vertices.push(Vertex::new(x, y));
         }
@@ -188,8 +189,7 @@ where
     where
         T: Into<f32> + Copy,
     {
-        let points: Vec<(f32, f32)> =
-            points.iter().map(|x| (x.0.into(), x.1.into())).collect();
+        let points: Vec<Point2D> = points.iter().map(|pt| pt.into()).collect();
         let vertices = self.normalize(&points);
         match self.renderer {
             Some(ref mut render) => render.draw(&vertices),
@@ -203,9 +203,9 @@ where
         T: Into<f32> + Copy,
     {
         let x_coords = linspace(-0.5f32, 0.5f32, y_coords.len());
-        let points: Vec<(f32, f32)> = x_coords
+        let points: Vec<Point2D> = x_coords
             .zip(y_coords.iter())
-            .map(|(x, y)| (x, (*y).into()))
+            .map(|(x, y)| Point2D::new(x, (*y).into()))
             .collect();
         let vertices = self.normalize(&points);
         match self.renderer {
@@ -218,31 +218,8 @@ where
     where
         T: Into<f32> + Copy,
     {
-        let points: Vec<(T, T)> = coords.iter().map(|x| (x.re, x.im)).collect();
+        let points: Vec<(T, T)> =
+            coords.iter().map(|pt| (pt.re, pt.im)).collect();
         self.plot_xy(&points);
     }
-}
-
-fn calc_min_max(points: &[f32]) -> [f32; 2] {
-    let min_val = points
-        .iter()
-        .min_by(|x, y| x.partial_cmp(y).unwrap())
-        .unwrap();
-    let max_val = points
-        .iter()
-        .max_by(|x, y| x.partial_cmp(y).unwrap())
-        .unwrap();
-    [*min_val, *max_val]
-}
-
-fn calc_xlims(points: &[(f32, f32)]) -> [f32; 2] {
-    let x: Vec<f32> = points.iter().map(|x| x.0).collect();
-    let xlims: [f32; 2] = calc_min_max(&x);
-    xlims
-}
-
-fn calc_ylims(points: &[(f32, f32)]) -> [f32; 2] {
-    let y: Vec<f32> = points.iter().map(|y| y.1).collect();
-    let ylims: [f32; 2] = calc_min_max(&y);
-    ylims
 }
