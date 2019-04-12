@@ -5,7 +5,8 @@ authors = ["ostrosco <ostrosco@fastmail.fm>"]
 edition = "2018"
 
 [dependencies]
-rusttype = "0.7"
-glium = "0.23"
+glium = "0.22"
+cgmath = "0.17"
+glium_text_rusttype = "0.3"
 itertools-num = "0.1"
 num = "0.2"
