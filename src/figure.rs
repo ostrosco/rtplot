@@ -2,22 +2,30 @@ use crate::utils::{self, Point2D};
 use glium::glutin::dpi::LogicalSize;
 use glium::implement_vertex;
 use glium::Surface;
+use glium_text_rusttype as glium_text;
 use itertools_num::linspace;
 use num::Complex;
+use std::fs::File;
+use std::path::Path;
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
 
     in vec2 position;
+    in vec2 tex_coords;
+
+    out vec2 v_tex_coords;
 
     void main() {
         gl_Position = vec4(position, 0.0, 1.0);
+        v_tex_coords = tex_coords;
     }
 "#;
 
 pub static FRAGMENT_SHADER: &'static str = r#"
     #version 140
 
+    in vec2 vec_tex_coords;
     out vec4 color;
 
     void main() {
@@ -28,13 +36,17 @@ pub static FRAGMENT_SHADER: &'static str = r#"
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
     position: [f32; 2],
+    tex_coords: [f32; 2],
 }
 
-implement_vertex!(Vertex, position);
+implement_vertex!(Vertex, position, tex_coords);
 
 impl Vertex {
     fn new(x: f32, y: f32) -> Self {
-        Vertex { position: [x, y] }
+        Vertex {
+            position: [x, y],
+            tex_coords: [0.0, 0.0],
+        }
     }
 }
 
@@ -44,6 +56,8 @@ pub struct Renderer<'a> {
     program: glium::Program,
     vertex_buffer: glium::VertexBuffer<Vertex>,
     draw_parameters: glium::DrawParameters<'a>,
+    text_system: glium_text::TextSystem,
+    font: glium_text::FontTexture,
 }
 
 impl<'a> Renderer<'a> {
@@ -73,6 +87,14 @@ impl<'a> Renderer<'a> {
             point_size: Some(5.0),
             ..Default::default()
         };
+        let text_system = glium_text::TextSystem::new(&display);
+        let font = glium_text::FontTexture::new(
+            &display,
+            File::open(&Path::new("src/font.ttf")).unwrap(),
+            128,
+            glium_text::FontTexture::ascii_character_list(),
+        )
+        .unwrap();
 
         Renderer {
             events_loop,
@@ -80,10 +102,12 @@ impl<'a> Renderer<'a> {
             program,
             vertex_buffer,
             draw_parameters,
+            text_system,
+            font,
         }
     }
 
-    pub fn draw(&mut self, vertices: &[Vertex]) {
+    pub fn draw(&mut self, vertices: &[Vertex], x_label: Option<&str>, y_label: Option<&str>) {
         self.vertex_buffer.invalidate();
         let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
         vb.write(&vertices);
@@ -102,8 +126,36 @@ impl<'a> Renderer<'a> {
                 &self.draw_parameters,
             )
             .unwrap();
+        if let Some(txt) = x_label {
+            self.draw_text(&mut target, txt);
+        }
+        if let Some(txt) = y_label {
+            self.draw_text(&mut target, txt);
+        }
 
         target.finish().unwrap();
+    }
+
+    pub fn draw_text<S>(&mut self, target: &mut S, text: &str) where S: glium::Surface {
+        let label = glium_text::TextDisplay::new(
+            &self.text_system,
+            &self.font,
+            text,
+        );
+        let text_width = label.get_width() * 0.1;
+        let matrix = [
+            [0.1, 0.0, 0.0, 0.0],
+            [0.0, 0.1, 0.0, 0.0],
+            [0.0, 0.0, 0.1, 0.0],
+            [-text_width / 2.0, -0.85, 0.0, 1.0],
+        ];
+        glium_text::draw(
+            &label,
+            &self.text_system,
+            target,
+            matrix,
+            (0.0, 0.0, 0.0, 1.0),
+        ).unwrap();
     }
 }
 
@@ -189,7 +241,9 @@ where
     pub fn plot(&mut self, points: &[Point2D]) {
         let vertices = self.normalize(&points);
         match self.renderer {
-            Some(ref mut render) => render.draw(&vertices),
+            Some(ref mut render) => {
+                render.draw(&vertices, self.xlabel, self.ylabel);
+            }
             None => panic!("Uninitialized renderer for figure"),
         }
     }
