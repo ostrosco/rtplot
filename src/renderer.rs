@@ -107,7 +107,10 @@ impl<'a> Renderer<'a> {
 
     pub fn draw(&mut self, vertices: &[Vertex], config: &FigureConfig) {
         self.vertex_buffer.invalidate();
-        let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
+        let vb = match self.vertex_buffer.slice_mut(0..vertices.len()) {
+            Some(slice) => slice,
+            None => return,
+        };
         vb.write(&vertices);
         let indices =
             glium::index::NoIndices(glium::index::PrimitiveType::Points);
