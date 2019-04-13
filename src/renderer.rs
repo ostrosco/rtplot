@@ -2,8 +2,6 @@ use crate::figure::FigureConfig;
 use glium::glutin::dpi::LogicalSize;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
-use std::fs::File;
-use std::path::Path;
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
@@ -95,7 +93,7 @@ impl<'a> Renderer<'a> {
         let text_system = glium_text::TextSystem::new(&display);
         let font = glium_text::FontTexture::new(
             &display,
-            File::open(&Path::new("src/font.ttf")).unwrap(),
+            ttf_noto_sans::REGULAR,
             128,
             glium_text::FontTexture::ascii_character_list(),
         )
