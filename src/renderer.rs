@@ -1,3 +1,4 @@
+use crate::figure::FigureConfig;
 use glium::glutin::dpi::LogicalSize;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
@@ -59,7 +60,10 @@ pub struct Renderer<'a> {
 impl<'a> Renderer<'a> {
     pub fn new() -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
-        let context = glium::glutin::ContextBuilder::new().with_vsync(true);
+        let context = glium::glutin::ContextBuilder::new()
+            .with_vsync(true)
+            .with_double_buffer(Some(true))
+            .with_multisampling(16);
         let window = glium::glutin::WindowBuilder::new()
             .with_dimensions(LogicalSize {
                 width: 400.0,
@@ -80,7 +84,7 @@ impl<'a> Renderer<'a> {
         let vertex_buffer =
             glium::VertexBuffer::empty_dynamic(&display, 10000).unwrap();
         let draw_parameters = glium::DrawParameters {
-            point_size: Some(5.0),
+            point_size: Some(1.0),
             ..Default::default()
         };
         let text_system = glium_text::TextSystem::new(&display);
@@ -103,12 +107,7 @@ impl<'a> Renderer<'a> {
         }
     }
 
-    pub fn draw(
-        &mut self,
-        vertices: &[Vertex],
-        x_label: Option<&str>,
-        y_label: Option<&str>,
-    ) {
+    pub fn draw(&mut self, vertices: &[Vertex], config: &FigureConfig) {
         self.vertex_buffer.invalidate();
         let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
         vb.write(&vertices);
@@ -127,36 +126,82 @@ impl<'a> Renderer<'a> {
                 &self.draw_parameters,
             )
             .unwrap();
-        if let Some(txt) = x_label {
-            self.draw_text(&mut target, txt);
-        }
-        if let Some(txt) = y_label {
-            self.draw_text(&mut target, txt);
-        }
+        self.draw_text(&mut target, config);
 
         target.finish().unwrap();
     }
 
-    pub fn draw_text<S>(&mut self, target: &mut S, text: &str)
+    pub fn draw_text<S>(&mut self, target: &mut S, config: &FigureConfig)
     where
         S: glium::Surface,
     {
-        let label =
-            glium_text::TextDisplay::new(&self.text_system, &self.font, text);
-        let text_width = label.get_width() * 0.1;
-        let matrix = [
-            [0.1, 0.0, 0.0, 0.0],
-            [0.0, 0.1, 0.0, 0.0],
-            [0.0, 0.0, 0.1, 0.0],
-            [-text_width / 2.0, -0.85, 0.0, 1.0],
-        ];
-        glium_text::draw(
-            &label,
-            &self.text_system,
-            target,
-            matrix,
-            (0.0, 0.0, 0.0, 1.0),
-        )
-        .unwrap();
+        if let Some(text) = config.xlabel {
+            let label = glium_text::TextDisplay::new(
+                &self.text_system,
+                &self.font,
+                text,
+            );
+            let text_width = label.get_width() * 0.1;
+            let matrix = cgmath::Matrix4::new(
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                -text_width / 2.0,
+                -0.85,
+                0.0,
+                1.0,
+            );
+            glium_text::draw(
+                &label,
+                &self.text_system,
+                target,
+                matrix,
+                (0.0, 0.0, 0.0, 1.0),
+            )
+            .unwrap();
+        }
+        if let Some(text) = config.ylabel {
+            let label = glium_text::TextDisplay::new(
+                &self.text_system,
+                &self.font,
+                text,
+            );
+            let text_width = label.get_width() * 0.1;
+            let matrix = cgmath::Matrix4::new(
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.1,
+                0.0,
+                -0.85,
+                -text_width / 2.0,
+                0.0,
+                1.0,
+            ) * cgmath::Matrix4::from_angle_z(cgmath::Deg(90.0));
+            glium_text::draw(
+                &label,
+                &self.text_system,
+                target,
+                matrix,
+                (0.0, 0.0, 0.0, 1.0),
+            )
+            .unwrap();
+        }
     }
 }
