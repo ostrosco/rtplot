@@ -1,6 +1,7 @@
 use crate::renderer::{Renderer, Vertex};
 use std::marker::PhantomData;
-use crate::utils::{self, Point2D};
+use crate::utils;
+use cgmath::Point2;
 use itertools_num::linspace;
 use num::Complex;
 
@@ -61,7 +62,7 @@ where
         self
     }
 
-    fn normalize(&self, points: &[Point2D]) -> Vec<Vertex>
+    fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex>
     where
         T: Into<f32> + Copy,
     {
@@ -90,7 +91,7 @@ where
         vertices
     }
 
-    pub fn plot(&mut self, points: &[Point2D]) {
+    pub fn plot(&mut self, points: &[Point2<f32>]) {
         let vertices = self.normalize(&points);
         match self.renderer {
             Some(ref mut render) => {
@@ -105,7 +106,7 @@ where
     where
         T: Into<f32> + Copy,
     {
-        let points: Vec<Point2D> = points.iter().map(|pt| pt.into()).collect();
+        let points: Vec<Point2<f32>>= points.iter().map(|pt| Point2::new(pt.0.into(), pt.1.into())).collect();
         self.plot(&points);
     }
 
@@ -115,9 +116,9 @@ where
         T: Into<f32> + Copy,
     {
         let x_coords = linspace(-0.5f32, 0.5f32, y_coords.len());
-        let points: Vec<Point2D> = x_coords
+        let points: Vec<Point2<f32>> = x_coords
             .zip(y_coords.iter())
-            .map(|(x, y)| Point2D::new(x, (*y).into()))
+            .map(|(x, y)| Point2::new(x, (*y).into()))
             .collect();
         self.plot(&points);
     }
@@ -126,8 +127,8 @@ where
     where
         T: Into<f32> + Copy,
     {
-        let points: Vec<Point2D> =
-            coords.iter().map(|pt| (pt.re, pt.im).into()).collect();
+        let points: Vec<Point2<f32>> =
+            coords.iter().map(|pt| Point2::new(pt.re.into(), pt.im.into())).collect();
         self.plot(&points);
     }
 }
