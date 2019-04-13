@@ -16,7 +16,7 @@ fn main() {
     let mut status = true;
     let handle = thread::spawn(move || {
         let mut figure = Figure::new()
-            .init_renderer()
+            .init_renderer(10000)
             .ylim([-10.0, 10.0])
             .xlabel("Time (s)")
             .ylabel("Sin Stuff");

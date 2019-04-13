@@ -2,8 +2,6 @@ use crate::figure::FigureConfig;
 use glium::glutin::dpi::LogicalSize;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
-use std::fs::File;
-use std::path::Path;
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
@@ -63,7 +61,7 @@ impl<'a> Default for Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn new() -> Self {
+    pub fn new(num_points: usize) -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
@@ -87,7 +85,7 @@ impl<'a> Renderer<'a> {
         )
         .unwrap();
         let vertex_buffer =
-            glium::VertexBuffer::empty_dynamic(&display, 10000).unwrap();
+            glium::VertexBuffer::empty_dynamic(&display, num_points).unwrap();
         let draw_parameters = glium::DrawParameters {
             point_size: Some(1.0),
             ..Default::default()
@@ -95,7 +93,7 @@ impl<'a> Renderer<'a> {
         let text_system = glium_text::TextSystem::new(&display);
         let font = glium_text::FontTexture::new(
             &display,
-            File::open(&Path::new("src/font.ttf")).unwrap(),
+            ttf_noto_sans::REGULAR,
             128,
             glium_text::FontTexture::ascii_character_list(),
         )
@@ -114,7 +112,10 @@ impl<'a> Renderer<'a> {
 
     pub fn draw(&mut self, vertices: &[Vertex], config: &FigureConfig) {
         self.vertex_buffer.invalidate();
-        let vb = self.vertex_buffer.slice_mut(0..vertices.len()).unwrap();
+        let vb = match self.vertex_buffer.slice_mut(0..vertices.len()) {
+            Some(slice) => slice,
+            None => return,
+        };
         vb.write(&vertices);
         let indices =
             glium::index::NoIndices(glium::index::PrimitiveType::Points);
