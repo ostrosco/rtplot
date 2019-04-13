@@ -1,32 +1,4 @@
 use cgmath::Point2;
-pub struct Point2D {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl Point2D {
-    pub fn new(x: f32, y: f32) -> Self {
-        Point2D { x, y }
-    }
-}
-
-impl<T> From<(T, T)> for Point2D
-where
-    T: Into<f32> + Copy,
-{
-    fn from(val: (T, T)) -> Self {
-        Point2D::new(val.0.into(), val.1.into())
-    }
-}
-
-impl<T> From<&(T, T)> for Point2D
-where
-    T: Into<f32> + Copy,
-{
-    fn from(val: &(T, T)) -> Self {
-        Point2D::new(val.0.into(), val.1.into())
-    }
-}
 
 fn calc_min_max(points: &[f32]) -> [f32; 2] {
     let min_val = points

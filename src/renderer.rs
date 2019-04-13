@@ -56,6 +56,11 @@ pub struct Renderer<'a> {
     text_system: glium_text::TextSystem,
     font: glium_text::FontTexture,
 }
+impl<'a> Default for Renderer<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<'a> Renderer<'a> {
     pub fn new() -> Self {
