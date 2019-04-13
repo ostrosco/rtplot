@@ -34,8 +34,9 @@ where
             _phantom: PhantomData,
         }
     }
-    pub fn init_renderer(mut self) -> Self {
-        self.renderer = Some(Renderer::new());
+
+    pub fn init_renderer(mut self, num_points: usize) -> Self {
+        self.renderer = Some(Renderer::new(num_points));
         self
     }
 

@@ -61,7 +61,7 @@ impl<'a> Default for Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn new() -> Self {
+    pub fn new(num_points: usize) -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
@@ -85,7 +85,7 @@ impl<'a> Renderer<'a> {
         )
         .unwrap();
         let vertex_buffer =
-            glium::VertexBuffer::empty_dynamic(&display, 10000).unwrap();
+            glium::VertexBuffer::empty_dynamic(&display, num_points).unwrap();
         let draw_parameters = glium::DrawParameters {
             point_size: Some(1.0),
             ..Default::default()
