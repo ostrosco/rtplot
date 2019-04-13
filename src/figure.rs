@@ -1,4 +1,5 @@
 use crate::renderer::{Renderer, Vertex};
+use std::marker::PhantomData;
 use crate::utils::{self, Point2D};
 use itertools_num::linspace;
 use num::Complex;
@@ -11,22 +12,26 @@ pub struct FigureConfig<'a> {
     pub ylabel: Option<&'a str>,
 }
 
-#[derive(Default)]
 pub struct Figure<'a, T>
 where
     T: Into<f32> + Copy,
 {
     pub renderer: Option<Renderer<'a>>,
     pub config: FigureConfig<'a>,
-    _phantom: std::marker::PhantomData<T>,
+    _phantom: PhantomData<T>,
 }
 
 impl<'a, T> Figure<'a, T>
 where
-    T: Into<f32> + Copy + Default,
+    T: Into<f32> + Copy,
 {
     pub fn new() -> Self {
-        Self::default()
+        Figure {
+            renderer: None,
+            config: FigureConfig::default(),
+            _phantom: PhantomData,
+        }
+
     }
 
     pub fn init_renderer(mut self) -> Self {
