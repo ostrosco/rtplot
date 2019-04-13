@@ -18,7 +18,8 @@ fn main() {
         let mut figure = Figure::new()
             .init_renderer()
             .ylim([-10.0, 10.0])
-            .ylabel("Time (s)");
+            .xlabel("Time (s)")
+            .ylabel("Sin Stuff");
         loop {
             if !status {
                 break;
