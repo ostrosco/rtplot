@@ -7,20 +7,15 @@ pub static VERTEX_SHADER: &'static str = r#"
     #version 140
 
     in vec2 position;
-    in vec2 tex_coords;
-
-    out vec2 v_tex_coords;
 
     void main() {
         gl_Position = vec4(position, 0.0, 1.0);
-        v_tex_coords = tex_coords;
     }
 "#;
 
 pub static FRAGMENT_SHADER: &'static str = r#"
     #version 140
 
-    in vec2 vec_tex_coords;
     out vec4 color;
 
     void main() {
@@ -31,17 +26,13 @@ pub static FRAGMENT_SHADER: &'static str = r#"
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
     position: [f32; 2],
-    tex_coords: [f32; 2],
 }
 
-implement_vertex!(Vertex, position, tex_coords);
+implement_vertex!(Vertex, position);
 
 impl Vertex {
     pub fn new(x: f32, y: f32) -> Self {
-        Vertex {
-            position: [x, y],
-            tex_coords: [0.0, 0.0],
-        }
+        Vertex { position: [x, y] }
     }
 }
 
@@ -127,6 +118,7 @@ impl<'a> Renderer<'a> {
                 &self.draw_parameters,
             )
             .unwrap();
+        self.draw_axis(&mut target, config);
         self.draw_text(&mut target, config);
 
         target.finish().unwrap();
@@ -143,23 +135,12 @@ impl<'a> Renderer<'a> {
                 text,
             );
             let text_width = label.get_width() * 0.1;
+            #[rustfmt::skip]
             let matrix = cgmath::Matrix4::new(
-                0.1,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.1,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.1,
-                0.0,
-                -text_width / 2.0,
-                -0.85,
-                0.0,
-                1.0,
+                0.1, 0.0, 0.0, 0.0,
+                0.0, 0.1, 0.0, 0.0,
+                0.0, 0.0, 0.1, 0.0,
+                -text_width / 2.0, -0.90, 0.0, 1.0,
             );
             glium_text::draw(
                 &label,
@@ -177,23 +158,12 @@ impl<'a> Renderer<'a> {
                 text,
             );
             let text_width = label.get_width() * 0.1;
+            #[rustfmt::skip]
             let matrix = cgmath::Matrix4::new(
-                0.1,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.1,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.1,
-                0.0,
-                -0.85,
-                -text_width / 2.0,
-                0.0,
-                1.0,
+                0.1, 0.0, 0.0, 0.0,
+                0.0, 0.1, 0.0, 0.0,
+                0.0, 1.0, 0.1, 0.0,
+                -0.85, -text_width / 2.0, 0.0, 1.0,
             ) * cgmath::Matrix4::from_angle_z(cgmath::Deg(90.0));
             glium_text::draw(
                 &label,
@@ -204,5 +174,35 @@ impl<'a> Renderer<'a> {
             )
             .unwrap();
         }
+    }
+
+    pub fn draw_axis<S>(&mut self, target: &mut S)
+    where
+        S: glium::Surface,
+    {
+        self.vertex_buffer.invalidate();
+        let vb = match self.vertex_buffer.slice_mut(0..4) {
+            Some(slice) => slice,
+            None => return,
+        };
+        let bounding_box = [
+            Vertex::new(-0.75, -0.75),
+            Vertex::new(-0.75, 0.75),
+            Vertex::new(0.75, 0.75),
+            Vertex::new(0.75, -0.75),
+        ];
+        let indices =
+            glium::index::NoIndices(glium::index::PrimitiveType::LineLoop);
+        vb.write(&bounding_box);
+        let vb = self.vertex_buffer.slice(0..4).unwrap();
+        target
+            .draw(
+                vb,
+                &indices,
+                &self.program,
+                &glium::uniforms::EmptyUniforms,
+                &self.draw_parameters,
+            )
+            .unwrap();
     }
 }
