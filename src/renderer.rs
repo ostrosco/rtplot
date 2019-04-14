@@ -1,8 +1,8 @@
-use itertools_num::linspace;
 use crate::figure::FigureConfig;
 use glium::glutin::dpi::LogicalSize;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
+use itertools_num::linspace;
 
 pub static VERTEX_SHADER: &'static str = r#"
     #version 140
@@ -37,8 +37,16 @@ pub struct Vertex {
 implement_vertex!(Vertex, position, rgb);
 
 impl Vertex {
-    pub fn new(x: f32, y: f32, rgb: [f32; 3]) -> Self {
-        Vertex { position: [x, y], rgb }
+    pub fn new(x: f32, y: f32, rgb: [u8; 3]) -> Self {
+        let rgb: [f32; 3] = [
+            f32::from(rgb[0]) / 255.0,
+            f32::from(rgb[1]) / 255.0,
+            f32::from(rgb[2]) / 255.0,
+        ];
+        Vertex {
+            position: [x, y],
+            rgb,
+        }
     }
 }
 
@@ -93,23 +101,23 @@ impl<'a> Renderer<'a> {
         .unwrap();
 
         let mut bounding_box = vec![
-            Vertex::new(-0.75, -0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(-0.75, 0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(-0.75, 0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(0.75, 0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(0.75, 0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(0.75, -0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(0.75, -0.75, [0.0, 0.0, 0.0]),
-            Vertex::new(-0.75, -0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(-0.75, -0.75, [0, 0, 0]),
+            Vertex::new(-0.75, 0.75, [0, 0, 0]),
+            Vertex::new(-0.75, 0.75, [0, 0, 0]),
+            Vertex::new(0.75, 0.75, [0, 0, 0]),
+            Vertex::new(0.75, 0.75, [0, 0, 0]),
+            Vertex::new(0.75, -0.75, [0, 0, 0]),
+            Vertex::new(0.75, -0.75, [0, 0, 0]),
+            Vertex::new(-0.75, -0.75, [0, 0, 0]),
         ];
         for tick in linspace(-0.75, 0.75, 6) {
-            bounding_box.push(Vertex::new(tick, -0.70, [0.0, 0.0, 0.0]));
-            bounding_box.push(Vertex::new(tick, -0.75, [0.0, 0.0, 0.0]));
+            bounding_box.push(Vertex::new(tick, -0.70, [0, 0, 0]));
+            bounding_box.push(Vertex::new(tick, -0.75, [0, 0, 0]));
         }
 
         for tick in linspace(-0.75, 0.75, 5) {
-            bounding_box.push(Vertex::new(-0.70, tick, [0.0, 0.0, 0.0]));
-            bounding_box.push(Vertex::new(-0.75, tick, [0.0, 0.0, 0.0]));
+            bounding_box.push(Vertex::new(-0.70, tick, [0, 0, 0]));
+            bounding_box.push(Vertex::new(-0.75, tick, [0, 0, 0]));
         }
 
         Renderer {
