@@ -11,6 +11,7 @@ pub struct FigureConfig<'a> {
     pub ylim: Option<[f32; 2]>,
     pub xlabel: Option<&'a str>,
     pub ylabel: Option<&'a str>,
+    pub color: [f32; 3],
 }
 
 #[derive(Default)]
@@ -62,6 +63,11 @@ where
         self
     }
 
+    pub fn color(mut self, r: f32, g: f32, b: f32) -> Self {
+        self.config.color = [r, g, b];
+        self
+    }
+
     fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex>
     where
         T: Into<f32> + Copy,
@@ -87,7 +93,7 @@ where
             } else {
                 1.5 * point.y - 0.75
             };
-            vertices.push(Vertex::new(x, y));
+            vertices.push(Vertex::new(x, y, self.config.color));
         }
         vertices
     }

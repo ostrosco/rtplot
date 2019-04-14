@@ -1,3 +1,4 @@
+use itertools_num::linspace;
 use crate::figure::FigureConfig;
 use glium::glutin::dpi::LogicalSize;
 use glium::{self, implement_vertex, Surface};
@@ -7,32 +8,37 @@ pub static VERTEX_SHADER: &'static str = r#"
     #version 140
 
     in vec2 position;
+    in vec3 rgb;
+    out vec3 rgb_frag;
 
     void main() {
         gl_Position = vec4(position, 0.0, 1.0);
+        rgb_frag = rgb;
     }
 "#;
 
 pub static FRAGMENT_SHADER: &'static str = r#"
     #version 140
 
+    in vec3 rgb_frag;
     out vec4 color;
 
     void main() {
-        color = vec4(1.0, 0.0, 0.0, 1.0);
+        color = vec4(rgb_frag, 1.0);
     }
 "#;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
     position: [f32; 2],
+    rgb: [f32; 3],
 }
 
-implement_vertex!(Vertex, position);
+implement_vertex!(Vertex, position, rgb);
 
 impl Vertex {
-    pub fn new(x: f32, y: f32) -> Self {
-        Vertex { position: [x, y] }
+    pub fn new(x: f32, y: f32, rgb: [f32; 3]) -> Self {
+        Vertex { position: [x, y], rgb }
     }
 }
 
@@ -44,6 +50,7 @@ pub struct Renderer<'a> {
     draw_parameters: glium::DrawParameters<'a>,
     text_system: glium_text::TextSystem,
     font: glium_text::FontTexture,
+    bounding_box: Vec<Vertex>,
 }
 
 impl<'a> Renderer<'a> {
@@ -85,6 +92,26 @@ impl<'a> Renderer<'a> {
         )
         .unwrap();
 
+        let mut bounding_box = vec![
+            Vertex::new(-0.75, -0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(-0.75, 0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(-0.75, 0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(0.75, 0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(0.75, 0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(0.75, -0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(0.75, -0.75, [0.0, 0.0, 0.0]),
+            Vertex::new(-0.75, -0.75, [0.0, 0.0, 0.0]),
+        ];
+        for tick in linspace(-0.75, 0.75, 6) {
+            bounding_box.push(Vertex::new(tick, -0.70, [0.0, 0.0, 0.0]));
+            bounding_box.push(Vertex::new(tick, -0.75, [0.0, 0.0, 0.0]));
+        }
+
+        for tick in linspace(-0.75, 0.75, 5) {
+            bounding_box.push(Vertex::new(-0.70, tick, [0.0, 0.0, 0.0]));
+            bounding_box.push(Vertex::new(-0.75, tick, [0.0, 0.0, 0.0]));
+        }
+
         Renderer {
             events_loop,
             display,
@@ -93,6 +120,7 @@ impl<'a> Renderer<'a> {
             draw_parameters,
             text_system,
             font,
+            bounding_box,
         }
     }
 
@@ -118,7 +146,7 @@ impl<'a> Renderer<'a> {
                 &self.draw_parameters,
             )
             .unwrap();
-        self.draw_axis(&mut target, config);
+        self.draw_axis(&mut target);
         self.draw_text(&mut target, config);
 
         target.finish().unwrap();
@@ -181,20 +209,14 @@ impl<'a> Renderer<'a> {
         S: glium::Surface,
     {
         self.vertex_buffer.invalidate();
-        let vb = match self.vertex_buffer.slice_mut(0..4) {
+        let vb = match self.vertex_buffer.slice_mut(0..30) {
             Some(slice) => slice,
             None => return,
         };
-        let bounding_box = [
-            Vertex::new(-0.75, -0.75),
-            Vertex::new(-0.75, 0.75),
-            Vertex::new(0.75, 0.75),
-            Vertex::new(0.75, -0.75),
-        ];
+        vb.write(&self.bounding_box);
         let indices =
-            glium::index::NoIndices(glium::index::PrimitiveType::LineLoop);
-        vb.write(&bounding_box);
-        let vb = self.vertex_buffer.slice(0..4).unwrap();
+            glium::index::NoIndices(glium::index::PrimitiveType::LinesList);
+        let vb = self.vertex_buffer.slice(0..30).unwrap();
         target
             .draw(
                 vb,
