@@ -19,7 +19,8 @@ fn main() {
             .init_renderer(10000)
             .ylim([-10.0, 10.0])
             .xlabel("Time (s)")
-            .ylabel("Sin Stuff");
+            .ylabel("Sin Stuff")
+            .color(1.0, 0.0, 1.0);
         loop {
             if !status {
                 break;
