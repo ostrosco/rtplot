@@ -61,7 +61,7 @@ impl<'a> Renderer<'a> {
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
             .with_double_buffer(Some(true))
-            .with_multisampling(16);
+            .with_multisampling(2);
         let window = glium::glutin::WindowBuilder::new()
             .with_dimensions(LogicalSize {
                 width: 400.0,
@@ -82,7 +82,7 @@ impl<'a> Renderer<'a> {
         let vertex_buffer =
             glium::VertexBuffer::empty_dynamic(&display, num_points).unwrap();
         let draw_parameters = glium::DrawParameters {
-            point_size: Some(1.0),
+            point_size: Some(2.0),
             ..Default::default()
         };
         let text_system = glium_text::TextSystem::new(&display);
