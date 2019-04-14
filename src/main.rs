@@ -20,7 +20,7 @@ fn main() {
             .ylim([-10.0, 10.0])
             .xlabel("Time (s)")
             .ylabel("Sin Stuff")
-            .color(1.0, 0.0, 1.0);
+            .color(0x80, 0x00, 0x80);
         loop {
             if !status {
                 break;

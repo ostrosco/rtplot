@@ -11,7 +11,7 @@ pub struct FigureConfig<'a> {
     pub ylim: Option<[f32; 2]>,
     pub xlabel: Option<&'a str>,
     pub ylabel: Option<&'a str>,
-    pub color: [f32; 3],
+    pub color: [u8; 3],
 }
 
 #[derive(Default)]
@@ -62,7 +62,7 @@ where
         self
     }
 
-    pub fn color(mut self, r: f32, g: f32, b: f32) -> Self {
+    pub fn color(mut self, r: u8, g: u8, b: u8) -> Self {
         self.config.color = [r, g, b];
         self
     }
