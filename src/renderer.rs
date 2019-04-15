@@ -97,7 +97,7 @@ impl<'a> Renderer<'a> {
         let font = glium_text::FontTexture::new(
             &display,
             ttf_noto_sans::REGULAR,
-            64,
+            70,
             glium_text::FontTexture::ascii_character_list(),
         )
         .unwrap();
@@ -258,12 +258,13 @@ impl<'a> Renderer<'a> {
                     &self.font,
                     &format!("{:.02}", tick),
                 );
+                let text_height = tick_str.get_height() * 0.05;
                 #[rustfmt::skip]
                 let matrix = ortho_mat * cgmath::Matrix4::new(
                     0.05, 0.0, 0.0, 0.0,
                     0.0, 0.05, 0.0, 0.0,
                     0.0, 0.0, 0.05, 0.0,
-                    -0.85, coord, 0.0, 1.0,
+                    -0.85, coord - text_height / 2.0, 0.0, 1.0,
                 );
                 glium_text::draw(
                     &tick_str,
