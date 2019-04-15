@@ -1,4 +1,5 @@
 use crate::figure::FigureConfig;
+use glium::uniform;
 use glium::glutin::dpi::LogicalSize;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
@@ -10,9 +11,10 @@ pub static VERTEX_SHADER: &'static str = r#"
     in vec2 position;
     in vec3 rgb;
     out vec3 rgb_frag;
+    uniform mat4 projection;
 
     void main() {
-        gl_Position = vec4(position, 0.0, 1.0);
+        gl_Position = projection * vec4(position, 0.0, 1.0);
         rgb_frag = rgb;
     }
 "#;
@@ -70,8 +72,8 @@ impl<'a> Renderer<'a> {
             .with_multisampling(2);
         let window = glium::glutin::WindowBuilder::new()
             .with_dimensions(LogicalSize {
-                width: 600.0,
-                height: 600.0,
+                width: 640.0,
+                height: 480.0,
             })
             .with_decorations(true)
             .with_title("Plot");
@@ -95,7 +97,7 @@ impl<'a> Renderer<'a> {
         let font = glium_text::FontTexture::new(
             &display,
             ttf_noto_sans::REGULAR,
-            128,
+            64,
             glium_text::FontTexture::ascii_character_list(),
         )
         .unwrap();
@@ -133,6 +135,13 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn draw(&mut self, vertices: &[Vertex], config: &FigureConfig) {
+        let (w, h) = self.display.get_framebuffer_dimensions();
+        let aspect = w as f32 / h as f32;
+        let ortho_mat = cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
+        let ortho: &[[f32; 4]; 4] = ortho_mat.as_ref();
+        let uniforms = uniform! {
+            projection: *ortho,
+        };
         self.vertex_buffer.invalidate();
         let vb = match self.vertex_buffer.slice_mut(0..vertices.len()) {
             Some(slice) => slice,
@@ -150,7 +159,7 @@ impl<'a> Renderer<'a> {
                 vb,
                 &indices,
                 &self.program,
-                &glium::uniforms::EmptyUniforms,
+                &uniforms,
                 &self.draw_parameters,
             )
             .unwrap();
@@ -164,6 +173,9 @@ impl<'a> Renderer<'a> {
     where
         S: glium::Surface,
     {
+        let (w, h) = self.display.get_framebuffer_dimensions();
+        let aspect = w as f32 / h as f32;
+        let ortho_mat = cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
         if let Some(text) = config.xlabel {
             let label = glium_text::TextDisplay::new(
                 &self.text_system,
@@ -172,7 +184,7 @@ impl<'a> Renderer<'a> {
             );
             let text_width = label.get_width() * 0.1;
             #[rustfmt::skip]
-            let matrix = cgmath::Matrix4::new(
+            let matrix = ortho_mat * cgmath::Matrix4::new(
                 0.1, 0.0, 0.0, 0.0,
                 0.0, 0.1, 0.0, 0.0,
                 0.0, 0.0, 0.1, 0.0,
@@ -195,11 +207,11 @@ impl<'a> Renderer<'a> {
             );
             let text_width = label.get_width() * 0.1;
             #[rustfmt::skip]
-            let matrix = cgmath::Matrix4::new(
+            let matrix = ortho_mat * cgmath::Matrix4::new(
                 0.1, 0.0, 0.0, 0.0,
                 0.0, 0.1, 0.0, 0.0,
                 0.0, 1.0, 0.1, 0.0,
-                -0.85, -text_width / 2.0, 0.0, 1.0,
+                -0.90, -text_width / 2.0, 0.0, 1.0,
             ) * cgmath::Matrix4::from_angle_z(cgmath::Deg(90.0));
             glium_text::draw(
                 &label,
@@ -221,7 +233,7 @@ impl<'a> Renderer<'a> {
                 );
                 let text_width = tick_str.get_width() * 0.05;
                 #[rustfmt::skip]
-                let matrix = cgmath::Matrix4::new(
+                let matrix = ortho_mat * cgmath::Matrix4::new(
                     0.05, 0.0, 0.0, 0.0,
                     0.0, 0.05, 0.0, 0.0,
                     0.0, 0.0, 0.05, 0.0,
@@ -247,7 +259,7 @@ impl<'a> Renderer<'a> {
                     &format!("{:.02}", tick),
                 );
                 #[rustfmt::skip]
-                let matrix = cgmath::Matrix4::new(
+                let matrix = ortho_mat * cgmath::Matrix4::new(
                     0.05, 0.0, 0.0, 0.0,
                     0.0, 0.05, 0.0, 0.0,
                     0.0, 0.0, 0.05, 0.0,
