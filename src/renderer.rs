@@ -1,6 +1,6 @@
 use crate::figure::FigureConfig;
-use glium::uniform;
 use glium::glutin::dpi::LogicalSize;
+use glium::uniform;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
 use itertools_num::linspace;
