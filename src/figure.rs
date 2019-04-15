@@ -3,6 +3,7 @@ use crate::utils;
 use cgmath::Point2;
 use itertools_num::linspace;
 use num::Complex;
+use slice_deque::SliceDeque;
 use std::marker::PhantomData;
 
 #[derive(Default)]
@@ -12,6 +13,7 @@ pub struct FigureConfig<'a> {
     pub xlabel: Option<&'a str>,
     pub ylabel: Option<&'a str>,
     pub color: [u8; 3],
+    pub num_points: usize,
 }
 
 #[derive(Default)]
@@ -21,6 +23,7 @@ where
 {
     pub renderer: Option<Renderer<'a>>,
     pub config: FigureConfig<'a>,
+    pub samples: SliceDeque<f32>,
     _phantom: PhantomData<T>,
 }
 
@@ -32,11 +35,13 @@ where
         Figure {
             renderer: None,
             config: FigureConfig::default(),
+            samples: SliceDeque::new(),
             _phantom: PhantomData,
         }
     }
     pub fn init_renderer(mut self, num_points: usize) -> Self {
         self.renderer = Some(Renderer::new(num_points));
+        self.config.num_points = num_points;
         self
     }
 
@@ -139,6 +144,39 @@ where
             .map(|(x, y)| Point2::new(x, (*y).into()))
             .collect();
         self.plot(&points);
+    }
+
+    pub fn plot_samples(&mut self, y_coords: &[T])
+    where
+        T: Into<f32> + Copy,
+    {
+        if self.samples.len() >= self.config.num_points + y_coords.len() {
+            for _ in
+                0..self.samples.len() - self.config.num_points + y_coords.len()
+            {
+                self.samples.pop_front();
+            }
+        }
+        let y: Vec<f32> = y_coords.iter().map(|y| (*y).into()).collect();
+        for point in &y {
+            self.samples.push_back(*point);
+        }
+        let x_coords = linspace(
+            -0.5f32,
+            0.5f32,
+            self.config.num_points,
+        );
+        let points: Vec<Point2<f32>> = x_coords
+            .zip(self.samples.iter())
+            .map(|(x, y)| Point2::new(x, (*y).into()))
+            .collect();
+        let vertices = self.normalize(&points);
+        match self.renderer {
+            Some(ref mut render) => {
+                render.draw(&vertices, &self.config);
+            }
+            None => panic!("Uninitialized renderer for figure"),
+        }
     }
 
     pub fn plot_complex(&mut self, coords: &[Complex<T>])
