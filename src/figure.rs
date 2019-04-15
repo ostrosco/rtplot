@@ -6,6 +6,17 @@ use num::Complex;
 use slice_deque::SliceDeque;
 use std::marker::PhantomData;
 
+pub enum PlotType {
+    Line,
+    Dot,
+}
+
+impl Default for PlotType {
+    fn default() -> Self {
+        PlotType::Dot
+    }
+}
+
 #[derive(Default)]
 pub struct FigureConfig<'a> {
     pub xlim: Option<[f32; 2]>,
@@ -14,6 +25,7 @@ pub struct FigureConfig<'a> {
     pub ylabel: Option<&'a str>,
     pub color: [u8; 3],
     pub num_points: usize,
+    pub plot_type: PlotType,
 }
 
 #[derive(Default)]
@@ -69,6 +81,11 @@ where
 
     pub fn color(mut self, r: u8, g: u8, b: u8) -> Self {
         self.config.color = [r, g, b];
+        self
+    }
+
+    pub fn plot_type(mut self, plot_type: PlotType) -> Self {
+        self.config.plot_type = plot_type;
         self
     }
 

@@ -12,3 +12,6 @@ itertools-num = "0.1"
 num = "0.2"
 ttf-noto-sans = "0.1"
 slice-deque = "0.1"
+
+[dev-dependencies]
+rand = "0.6"

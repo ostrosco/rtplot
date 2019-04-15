@@ -1,4 +1,4 @@
-use crate::figure::FigureConfig;
+use crate::figure::{FigureConfig, PlotType};
 use glium::glutin::dpi::LogicalSize;
 use glium::uniform;
 use glium::{self, implement_vertex, Surface};
@@ -148,8 +148,11 @@ impl<'a> Renderer<'a> {
             None => return,
         };
         vb.write(&vertices);
-        let indices =
-            glium::index::NoIndices(glium::index::PrimitiveType::Points);
+        let plot_type = match config.plot_type {
+            PlotType::Dot => glium::index::PrimitiveType::Points,
+            PlotType::Line => glium::index::PrimitiveType::LineStrip,
+        };
+        let indices = glium::index::NoIndices(plot_type);
 
         let mut target = self.display.draw();
         target.clear_color(0.8, 0.8, 0.8, 1.0);
