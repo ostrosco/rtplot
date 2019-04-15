@@ -70,8 +70,8 @@ impl<'a> Renderer<'a> {
             .with_multisampling(2);
         let window = glium::glutin::WindowBuilder::new()
             .with_dimensions(LogicalSize {
-                width: 400.0,
-                height: 400.0,
+                width: 600.0,
+                height: 600.0,
             })
             .with_decorations(true)
             .with_title("Plot");
@@ -209,6 +209,59 @@ impl<'a> Renderer<'a> {
                 (0.0, 0.0, 0.0, 1.0),
             )
             .unwrap();
+        }
+        if let Some([xmin, xmax]) = config.xlim {
+            for (coord, tick) in
+                linspace(-0.75, 0.75, 6).zip(linspace(xmin, xmax, 6))
+            {
+                let tick_str = glium_text::TextDisplay::new(
+                    &self.text_system,
+                    &self.font,
+                    &format!("{:.02}", tick),
+                );
+                let text_width = tick_str.get_width() * 0.05;
+                #[rustfmt::skip]
+                let matrix = cgmath::Matrix4::new(
+                    0.05, 0.0, 0.0, 0.0,
+                    0.0, 0.05, 0.0, 0.0,
+                    0.0, 0.0, 0.05, 0.0,
+                    coord - text_width / 2.0, -0.80, 0.0, 1.0,
+                );
+                glium_text::draw(
+                    &tick_str,
+                    &self.text_system,
+                    target,
+                    matrix,
+                    (0.0, 0.0, 0.0, 1.0),
+                )
+                .unwrap();
+            }
+        }
+        if let Some([ymin, ymax]) = config.ylim {
+            for (coord, tick) in
+                linspace(-0.75, 0.75, 5).zip(linspace(ymin, ymax, 5))
+            {
+                let tick_str = glium_text::TextDisplay::new(
+                    &self.text_system,
+                    &self.font,
+                    &format!("{:.02}", tick),
+                );
+                #[rustfmt::skip]
+                let matrix = cgmath::Matrix4::new(
+                    0.05, 0.0, 0.0, 0.0,
+                    0.0, 0.05, 0.0, 0.0,
+                    0.0, 0.0, 0.05, 0.0,
+                    -0.85, coord, 0.0, 1.0,
+                );
+                glium_text::draw(
+                    &tick_str,
+                    &self.text_system,
+                    target,
+                    matrix,
+                    (0.0, 0.0, 0.0, 1.0),
+                )
+                .unwrap();
+            }
         }
     }
 

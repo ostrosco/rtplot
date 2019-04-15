@@ -82,6 +82,15 @@ where
         };
         let mut vertices = vec![];
         for point in points {
+            // If there are points outside the min and max range, skip over
+            // them since we won't draw them anyways.
+            if point.x > max_x
+                || point.x < min_x
+                || point.y > max_y
+                || point.y < min_y
+            {
+                continue;
+            }
             let error: f32 = 0.0;
             let x = if (max_x - min_x).abs() > error {
                 1.5 * (point.x - min_x) / (max_x - min_x) - 0.75
