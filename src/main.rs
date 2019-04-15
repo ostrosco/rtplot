@@ -17,9 +17,10 @@ fn main() {
     let handle = thread::spawn(move || {
         let mut figure = Figure::new()
             .init_renderer(10000)
+            .xlim([0.0, 1.0])
             .ylim([-10.0, 10.0])
             .xlabel("Time (s)")
-            .ylabel("Sin Stuff")
+            .ylabel("Amplitude")
             .color(0x80, 0x00, 0x80);
         loop {
             if !status {
