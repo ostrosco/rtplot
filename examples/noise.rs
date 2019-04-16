@@ -1,6 +1,6 @@
+use rand::distributions::{Distribution, Normal};
 use rtplot::figure::{Figure, PlotType};
 use std::thread;
-use rand::distributions::{Distribution, Normal};
 
 fn main() {
     let mut status = true;
@@ -19,7 +19,11 @@ fn main() {
                 break;
             }
 
-            let v: Vec<f32> = normal.sample_iter(&mut rng).take(10).map(|x| x as f32).collect();
+            let v: Vec<f32> = normal
+                .sample_iter(&mut rng)
+                .take(10)
+                .map(|x| x as f32)
+                .collect();
             figure.plot_samples(&v);
 
             let events_loop = match figure.renderer {

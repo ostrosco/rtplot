@@ -4,7 +4,6 @@ use cgmath::Point2;
 use itertools_num::linspace;
 use num::Complex;
 use slice_deque::SliceDeque;
-use std::marker::PhantomData;
 
 pub enum PlotType {
     Line,
@@ -29,26 +28,20 @@ pub struct FigureConfig<'a> {
 }
 
 #[derive(Default)]
-pub struct Figure<'a, T>
-where
-    T: Into<f32> + Copy,
-{
+pub struct Figure<'a> {
     pub renderer: Option<Renderer<'a>>,
     pub config: FigureConfig<'a>,
     pub samples: SliceDeque<f32>,
-    _phantom: PhantomData<T>,
+    pub complex_samples: SliceDeque<Complex<f32>>,
 }
 
-impl<'a, T> Figure<'a, T>
-where
-    T: Into<f32> + Copy,
-{
+impl<'a> Figure<'a> {
     pub fn new() -> Self {
         Figure {
             renderer: None,
             config: FigureConfig::default(),
             samples: SliceDeque::new(),
-            _phantom: PhantomData,
+            complex_samples: SliceDeque::new(),
         }
     }
 
@@ -90,10 +83,7 @@ where
         self
     }
 
-    fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex>
-    where
-        T: Into<f32> + Copy,
-    {
+    fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex> {
         let [min_x, max_x] = match self.config.xlim {
             Some(lim) => lim,
             None => utils::calc_xlims(points),
@@ -140,7 +130,7 @@ where
     }
 
     /// Take an array of points and draw it to the screen.
-    pub fn plot_xy(&mut self, points: &[(T, T)])
+    pub fn plot_xy<T>(&mut self, points: &[(T, T)])
     where
         T: Into<f32> + Copy,
     {
@@ -152,7 +142,7 @@ where
     }
 
     /// Take an array of y coordinates, interpolate the x, and then plot.
-    pub fn plot_y(&mut self, y_coords: &[T])
+    pub fn plot_y<T>(&mut self, y_coords: &[T])
     where
         T: Into<f32> + Copy,
     {
@@ -164,7 +154,7 @@ where
         self.plot(&points);
     }
 
-    pub fn plot_samples(&mut self, y_coords: &[T])
+    pub fn plot_samples<T>(&mut self, y_coords: &[T])
     where
         T: Into<f32> + Copy,
     {
@@ -179,14 +169,10 @@ where
         for point in &y {
             self.samples.push_back(*point);
         }
-        let x_coords = linspace(
-            -0.5f32,
-            0.5f32,
-            self.config.num_points,
-        );
+        let x_coords = linspace(-0.5f32, 0.5f32, self.config.num_points);
         let points: Vec<Point2<f32>> = x_coords
             .zip(self.samples.iter())
-            .map(|(x, y)| Point2::new(x, (*y).into()))
+            .map(|(x, y)| Point2::new(x, *y))
             .collect();
         let vertices = self.normalize(&points);
         match self.renderer {
@@ -197,7 +183,32 @@ where
         }
     }
 
-    pub fn plot_complex(&mut self, coords: &[Complex<T>])
+    pub fn plot_complex_samples(&mut self, points: &[Complex<f32>]) {
+        if self.complex_samples.len() >= self.config.num_points + points.len() {
+            for _ in 0..self.complex_samples.len() - self.config.num_points
+                + points.len()
+            {
+                self.complex_samples.pop_front();
+            }
+        }
+        for point in points {
+            self.complex_samples.push_back(*point);
+        }
+        let points: Vec<Point2<f32>> = self
+            .complex_samples
+            .iter()
+            .map(|x| Point2::new(x.re, x.im))
+            .collect();
+        let vertices = self.normalize(&points);
+        match self.renderer {
+            Some(ref mut render) => {
+                render.draw(&vertices, &self.config);
+            }
+            None => panic!("Uninitialized renderer for figure"),
+        }
+    }
+
+    pub fn plot_complex<T>(&mut self, coords: &[Complex<T>])
     where
         T: Into<f32> + Copy,
     {
