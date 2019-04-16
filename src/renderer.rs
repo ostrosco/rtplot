@@ -143,6 +143,18 @@ impl<'a> Renderer<'a> {
             projection: *ortho,
         };
         self.vertex_buffer.invalidate();
+
+        let mut target = self.display.draw();
+        target.clear_color(0.8, 0.8, 0.8, 1.0);
+        // If there are no vertices provided during this draw, draw the axes
+        // and stop.
+        if vertices.is_empty() {
+            self.draw_axis(&mut target);
+            self.draw_text(&mut target, config);
+
+            target.finish().unwrap();
+            return;
+        }
         let vb = match self.vertex_buffer.slice_mut(0..vertices.len()) {
             Some(slice) => slice,
             None => return,
@@ -154,8 +166,6 @@ impl<'a> Renderer<'a> {
         };
         let indices = glium::index::NoIndices(plot_type);
 
-        let mut target = self.display.draw();
-        target.clear_color(0.8, 0.8, 0.8, 1.0);
         let vb = self.vertex_buffer.slice(0..vertices.len()).unwrap();
         target
             .draw(
