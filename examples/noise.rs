@@ -24,7 +24,7 @@ fn main() {
                 .take(10)
                 .map(|x| x as f32)
                 .collect();
-            figure.plot_samples(&v);
+            figure.plot_stream(&v);
 
             let events_loop = match figure.renderer {
                 Some(ref mut rend) => &mut rend.events_loop,

@@ -153,7 +153,7 @@ impl<'a> Figure<'a> {
         self.plot(&points);
     }
 
-    pub fn plot_samples<T>(&mut self, y_coords: &[T])
+    pub fn plot_stream<T>(&mut self, y_coords: &[T])
     where
         T: Into<f32> + Copy,
     {
@@ -182,7 +182,7 @@ impl<'a> Figure<'a> {
         }
     }
 
-    pub fn plot_complex_samples(&mut self, points: &[Complex<f32>]) {
+    pub fn plot_complex_stream(&mut self, points: &[Complex<f32>]) {
         if self.complex_samples.len() >= self.config.num_points + points.len() {
             for _ in 0..self.complex_samples.len() - self.config.num_points
                 + points.len()
