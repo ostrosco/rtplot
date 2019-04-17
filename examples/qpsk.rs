@@ -35,7 +35,7 @@ fn main() {
             }
 
             let symbol = generate_symbol();
-            figure.plot_complex_samples(&[symbol]);
+            figure.plot_complex_stream(&[symbol]);
 
             let events_loop = match figure.renderer {
                 Some(ref mut rend) => &mut rend.events_loop,
