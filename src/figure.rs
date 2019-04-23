@@ -18,12 +18,29 @@ impl Default for PlotType {
 
 #[derive(Default)]
 pub struct FigureConfig<'a> {
+    // The min and max bounds of the x axis. If set to None, x-axis will be
+    // autoscaled. Defaults to None.
     pub xlim: Option<[f32; 2]>,
+
+    // The min and max bounds of the y axis. If set to None, y-axis will be
+    // autoscaled. Defaults to None.
     pub ylim: Option<[f32; 2]>,
+
+    // A label for the x-axis. Defaults to None.
     pub xlabel: Option<&'a str>,
+
+    // A label for the y-axis. Defaults to None.
     pub ylabel: Option<&'a str>,
+
+    // The color of points or lines to be drawn onto the graph. Defaults to
+    // 0x000000, or black.
     pub color: [u8; 3],
+
+    // The number of points. Defaults to 0. Set this by calling
+    // Figure::init_renderer().
     pub num_points: usize,
+
+    // The type of plot to draw. Defaults to a dot plot.
     pub plot_type: PlotType,
 }
 
@@ -31,7 +48,11 @@ pub struct FigureConfig<'a> {
 pub struct Figure<'a> {
     pub renderer: Option<Renderer<'a>>,
     pub config: FigureConfig<'a>,
+    // A queue holding samples if the figure is going to be used for streaming
+    // plotting. Size is capped at `config.num_points`.
     pub samples: SliceDeque<f32>,
+
+    // A queue holding complex samples as above.
     pub complex_samples: SliceDeque<Complex<f32>>,
 }
 
@@ -45,6 +66,10 @@ impl<'a> Figure<'a> {
         }
     }
 
+    /// Initializes the renderer. Must be called before plotting.
+    ///
+    /// As nothing is Send, this is used to initialize the renderer in the
+    /// thread once you make the object.
     pub fn init_renderer(mut self, num_points: usize) -> Self {
         self.renderer = Some(Renderer::new(num_points));
         self.config.num_points = num_points;
@@ -119,7 +144,7 @@ impl<'a> Figure<'a> {
         vertices
     }
 
-    pub fn plot(&mut self, points: &[Point2<f32>]) {
+    fn plot(&mut self, points: &[Point2<f32>]) {
         let vertices = self.normalize(&points);
         match self.renderer {
             Some(ref mut render) => {
@@ -154,6 +179,7 @@ impl<'a> Figure<'a> {
         self.plot(&points);
     }
 
+    /// Added a series
     pub fn plot_stream<T>(&mut self, y_coords: &[T])
     where
         T: Into<f32> + Copy,
