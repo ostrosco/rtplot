@@ -45,6 +45,8 @@ pub struct FigureConfig<'a> {
 }
 
 #[derive(Default)]
+/// Creates a figure that will wait to receive samples, then draw them onto the
+/// plot.
 pub struct Figure<'a> {
     pub renderer: Option<Renderer<'a>>,
     pub config: FigureConfig<'a>,
@@ -57,10 +59,22 @@ pub struct Figure<'a> {
 }
 
 impl<'a> Figure<'a> {
+    /// Create a figure with default settings.
     pub fn new() -> Self {
-        Figure {
+        Self {
             renderer: None,
             config: FigureConfig::default(),
+            samples: SliceDeque::new(),
+            complex_samples: SliceDeque::new(),
+        }
+    }
+
+    /// Create a figure from an existing configuration. Useful if you don't
+    /// want to use the builder pattern to initialize a figure from scratch.
+    pub fn new_with_config(config: FigureConfig<'a>) -> Self {
+        Self {
+            renderer: None,
+            config,
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
         }
@@ -154,7 +168,8 @@ impl<'a> Figure<'a> {
         }
     }
 
-    /// Take an array of points and draw it to the screen.
+    /// Take an array of 2D points and draw them to the plot. This overrides
+    /// any samples in the queue.
     pub fn plot_xy<T>(&mut self, points: &[(T, T)])
     where
         T: Into<f32> + Copy,
@@ -166,7 +181,8 @@ impl<'a> Figure<'a> {
         self.plot(&points);
     }
 
-    /// Take an array of y coordinates, interpolate the x, and then plot.
+    /// Takes a series of real samples and draws them onto the plot. This
+    /// overrides any samples in the queue. The x-axis will be interpolated.
     pub fn plot_y<T>(&mut self, y_coords: &[T])
     where
         T: Into<f32> + Copy,
@@ -179,7 +195,9 @@ impl<'a> Figure<'a> {
         self.plot(&points);
     }
 
-    /// Added a series
+    /// Takes a series of real samples and draws them onto the plot. Samples
+    /// received from the stream are appended to the queue and any samples
+    /// exceeding the queue size are removed. The x-axis will be interpolated.
     pub fn plot_stream<T>(&mut self, y_coords: &[T])
     where
         T: Into<f32> + Copy,
@@ -209,7 +227,13 @@ impl<'a> Figure<'a> {
         }
     }
 
-    pub fn plot_complex_stream(&mut self, points: &[Complex<f32>]) {
+    /// Takes a slice of complex samples and draws them onto the plot. Samples
+    /// received from the stream are appended to the queue and any samples
+    /// exceeding the queue size are removed.
+    pub fn plot_complex_stream<T>(&mut self, points: &[Complex<T>])
+    where
+        T: Into<f32> + Copy,
+    {
         if self.complex_samples.len() >= self.config.num_points + points.len() {
             for _ in 0..self.complex_samples.len() - self.config.num_points
                 + points.len()
@@ -217,9 +241,15 @@ impl<'a> Figure<'a> {
                 self.complex_samples.pop_front();
             }
         }
+
+        let points: Vec<Complex<f32>> = points
+            .iter()
+            .map(|x| Complex::new(x.re.into(), x.im.into()))
+            .collect();
         for point in points {
-            self.complex_samples.push_back(*point);
+            self.complex_samples.push_back(point);
         }
+
         let points: Vec<Point2<f32>> = self
             .complex_samples
             .iter()
@@ -234,6 +264,8 @@ impl<'a> Figure<'a> {
         }
     }
 
+    /// Takes a slice of complex samples and draws them onto the plot. This
+    /// overrides any existing samples in the queue.
     pub fn plot_complex<T>(&mut self, coords: &[Complex<T>])
     where
         T: Into<f32> + Copy,
