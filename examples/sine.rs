@@ -1,5 +1,5 @@
 use itertools_num::linspace;
-use rtplot::figure::{Figure, PlotType};
+use rtplot::Figure, PlotType};
 use std::f32::consts::PI;
 use std::thread;
 
