@@ -1,5 +1,5 @@
 use rand::distributions::{Distribution, Normal};
-use rtplot::figure::{Figure, PlotType};
+use rtplot::{Figure, PlotType};
 use std::thread;
 
 fn main() {
