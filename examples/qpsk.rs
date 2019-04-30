@@ -1,7 +1,7 @@
 use num::Complex;
 use rand::distributions::{Distribution, Normal};
 use rand::seq::SliceRandom;
-use rtplot::figure::{Figure, PlotType};
+use rtplot::{Figure, PlotType};
 use std::f32::consts::PI;
 use std::thread;
 
