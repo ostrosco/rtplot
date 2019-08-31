@@ -35,32 +35,8 @@ fn main() {
             }
 
             let symbol = generate_symbol();
+            status = figure.handle_escape();
             figure.plot_complex_stream(&[symbol]);
-
-            let events_loop = match figure.renderer {
-                Some(ref mut rend) => &mut rend.events_loop,
-                None => panic!("uninitialized renderer"),
-            };
-            events_loop.poll_events(|event| {
-                use glium::glutin::{Event, WindowEvent};
-                #[allow(clippy::single_match)]
-                match event {
-                    Event::WindowEvent { event, .. } => match event {
-                        WindowEvent::Destroyed => status = false,
-                        WindowEvent::KeyboardInput {
-                            input:
-                                glium::glutin::KeyboardInput {
-                                    virtual_keycode:
-                                        Some(glium::glutin::VirtualKeyCode::Escape),
-                                    ..
-                                },
-                            ..
-                        } => status = false,
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            });
         }
     });
 

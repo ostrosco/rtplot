@@ -122,6 +122,43 @@ impl<'a> Figure<'a> {
         self
     }
 
+    /// Returns if the escape key has been pressed.
+    ///
+    /// As the event loop is not thread safe, checking for a keypress has to be
+    /// done in the main thread. This is a helper function for users who choose
+    /// to have the Escape key close the thread.
+    ///
+    pub fn handle_escape(&mut self) -> bool {
+        let mut status = true;
+
+        let events_loop = match self.renderer {
+            Some(ref mut rend) => &mut rend.events_loop,
+            None => panic!("uninitialized renderer"),
+        };
+
+        events_loop.poll_events(|event| {
+            use glium::glutin::{Event, WindowEvent};
+            #[allow(clippy::single_match)]
+            match event {
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::Destroyed => status = false,
+                    WindowEvent::KeyboardInput {
+                        input:
+                            glium::glutin::KeyboardInput {
+                                virtual_keycode:
+                                    Some(glium::glutin::VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    } => status = false,
+                    _ => (),
+                },
+                _ => (),
+            }
+        });
+        status
+    }
+
     fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex> {
         let [min_x, max_x] = match self.config.xlim {
             Some(lim) => lim,
