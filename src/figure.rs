@@ -141,8 +141,9 @@ impl<'a> Figure<'a> {
             #[allow(clippy::single_match)]
             match event {
                 Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::Destroyed |
-                    WindowEvent::CloseRequested => status = false,
+                    WindowEvent::Destroyed | WindowEvent::CloseRequested => {
+                        status = false
+                    }
                     _ => (),
                 },
                 _ => (),

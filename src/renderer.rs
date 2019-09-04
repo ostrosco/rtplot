@@ -5,7 +5,7 @@ use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
 use itertools_num::linspace;
 
-pub static VERTEX_SHADER: &'static str = r#"
+pub static VERTEX_SHADER: &str = r#"
     #version 140
 
     in vec2 position;
@@ -19,7 +19,7 @@ pub static VERTEX_SHADER: &'static str = r#"
     }
 "#;
 
-pub static FRAGMENT_SHADER: &'static str = r#"
+pub static FRAGMENT_SHADER: &str = r#"
     #version 140
 
     in vec3 rgb_frag;
