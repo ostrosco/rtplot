@@ -128,7 +128,7 @@ impl<'a> Figure<'a> {
     /// done in the main thread. This is a helper function for users who choose
     /// to have the Escape key close the thread.
     ///
-    pub fn handle_escape(&mut self) -> bool {
+    pub fn handle_events(&mut self) -> bool {
         let mut status = true;
 
         let events_loop = match self.renderer {
@@ -141,16 +141,8 @@ impl<'a> Figure<'a> {
             #[allow(clippy::single_match)]
             match event {
                 Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::Destroyed => status = false,
-                    WindowEvent::KeyboardInput {
-                        input:
-                            glium::glutin::KeyboardInput {
-                                virtual_keycode:
-                                    Some(glium::glutin::VirtualKeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => status = false,
+                    WindowEvent::Destroyed |
+                    WindowEvent::CloseRequested => status = false,
                     _ => (),
                 },
                 _ => (),

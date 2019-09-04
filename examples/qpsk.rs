@@ -35,7 +35,7 @@ fn main() {
             }
 
             let symbol = generate_symbol();
-            status = figure.handle_escape();
+            status = figure.handle_events();
             figure.plot_complex_stream(&[symbol]);
         }
     });

@@ -24,7 +24,7 @@ fn main() {
                 .take(10)
                 .map(|x| x as f32)
                 .collect();
-            status = figure.handle_escape();
+            status = figure.handle_events();
             figure.plot_stream(&v);
         }
     });

@@ -29,7 +29,7 @@ fn main() {
             }
 
             let sin_vals = calculate_sin(phase);
-            status = figure.handle_escape();
+            status = figure.handle_events();
             figure.plot_y(&sin_vals);
             phase += PI / 20.0;
         }
