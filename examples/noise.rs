@@ -1,35 +1,26 @@
-use itertools_num::linspace;
-use rtplot::figure::Figure;
-use std::f32::consts::PI;
+use rtplot::figure::{Figure, PlotType};
 use std::thread;
-
-fn calculate_sin(phase: f32) -> Vec<f32> {
-    let sin_vals: Vec<_> = linspace(0.0, 100.0, 10000)
-        .map(|x| 10.0 * (PI / 8.0 * x as f32 + phase).sin())
-        .collect();
-
-    sin_vals
-}
+use rand::distributions::{Distribution, Normal};
 
 fn main() {
-    let mut phase = 0.0;
     let mut status = true;
     let handle = thread::spawn(move || {
+        let normal = Normal::new(0.0, 1.0);
+        let mut rng = rand::thread_rng();
         let mut figure = Figure::new()
-            .init_renderer(10000)
-            .xlim([0.0, 1.0])
-            .ylim([-10.0, 10.0])
+            .init_renderer(100)
+            .ylim([-1.0, 1.0])
             .xlabel("Time (s)")
             .ylabel("Amplitude")
+            .plot_type(PlotType::Line)
             .color(0x80, 0x00, 0x80);
         loop {
             if !status {
                 break;
             }
 
-            let sin_vals = calculate_sin(phase);
-            figure.plot_y(&sin_vals);
-            phase += PI / 20.0;
+            let v: Vec<f32> = normal.sample_iter(&mut rng).take(10).map(|x| x as f32).collect();
+            figure.plot_samples(&v);
 
             let events_loop = match figure.renderer {
                 Some(ref mut rend) => &mut rend.events_loop,
