@@ -13,7 +13,6 @@ fn calculate_sin(phase: f32) -> Vec<f32> {
 
 fn main() {
     let mut phase = 0.0;
-    let mut status = true;
     let handle = thread::spawn(move || {
         let mut figure = Figure::new()
             .init_renderer(10000)
@@ -23,16 +22,12 @@ fn main() {
             .ylabel("Amplitude")
             .plot_type(PlotType::Dot)
             .color(0x80, 0x00, 0x80);
-        loop {
-            if !status {
-                break;
-            }
 
+        Figure::display(figure, |fig| {
             let sin_vals = calculate_sin(phase);
-            status = figure.handle_events();
-            figure.plot_y(&sin_vals);
+            fig.plot_y(&sin_vals);
             phase += PI / 20.0;
-        }
+        });
     });
 
     handle.join().unwrap();

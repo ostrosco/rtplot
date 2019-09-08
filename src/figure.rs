@@ -306,4 +306,16 @@ impl<'a> Figure<'a> {
             .collect();
         self.plot(&points);
     }
+
+    /// Hijacks the current thread to run the plotting and event loop.
+    pub fn display(mut figure: Figure, mut plot_fn: impl FnMut(&mut Figure)) {
+        let mut status = true;
+        loop {
+            if !status {
+                break;
+            }
+            status = figure.handle_events();
+            plot_fn(&mut figure);
+        }
+    }
 }

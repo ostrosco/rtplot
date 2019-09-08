@@ -21,7 +21,6 @@ fn generate_symbol() -> Complex<f32> {
 }
 
 fn main() {
-    let mut status = true;
     let handle = thread::spawn(move || {
         let mut figure = Figure::new()
             .init_renderer(10000)
@@ -29,15 +28,10 @@ fn main() {
             .ylim([-1.0, 1.0])
             .plot_type(PlotType::Dot)
             .color(0x50, 0x20, 0x50);
-        loop {
-            if !status {
-                break;
-            }
-
+        Figure::display(figure, |fig| {
             let symbol = generate_symbol();
-            status = figure.handle_events();
-            figure.plot_complex_stream(&[symbol]);
-        }
+            fig.plot_complex_stream(&[symbol]);
+        });
     });
 
     handle.join().unwrap();
