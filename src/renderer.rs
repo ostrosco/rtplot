@@ -8,14 +8,16 @@ use itertools_num::linspace;
 pub static VERTEX_SHADER: &str = r#"
     #version 140
 
-    in vec2 position;
+    in vec3 position;
     in vec3 rgb;
     out vec3 rgb_frag;
+    out vec3 f_pos;
     uniform mat4 projection;
 
     void main() {
-        gl_Position = projection * vec4(position, 0.0, 1.0);
+        gl_Position = projection * vec4(position, 1.0);
         rgb_frag = rgb;
+        f_pos = position;
     }
 "#;
 
@@ -23,30 +25,46 @@ pub static FRAGMENT_SHADER: &str = r#"
     #version 140
 
     in vec3 rgb_frag;
+    in vec3 f_pos;
     out vec4 color;
 
     void main() {
-        color = vec4(rgb_frag, 1.0);
+        color = vec4(rgb_frag[0] + f_pos[2], rgb_frag[1], rgb_frag[2], 1.0);
     }
 "#;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
-    position: [f32; 2],
+    position: [f32; 3],
+    tex_coords: [f32; 2],
     rgb: [f32; 3],
 }
 
-implement_vertex!(Vertex, position, rgb);
+implement_vertex!(Vertex, position, tex_coords, rgb);
 
 impl Vertex {
-    pub fn new(x: f32, y: f32, rgb: [u8; 3]) -> Self {
+    pub fn new_2d(x: f32, y: f32, rgb: [u8; 3]) -> Self {
         let rgb: [f32; 3] = [
             f32::from(rgb[0]) / 255.0,
             f32::from(rgb[1]) / 255.0,
             f32::from(rgb[2]) / 255.0,
         ];
-        Vertex {
-            position: [x, y],
+        Self {
+            position: [x, y, 0.5],
+            tex_coords: [0.0, 0.0],
+            rgb,
+        }
+    }
+
+    pub fn new(x: f32, y: f32, z: f32, tex_coords: [f32; 2], rgb: [u8; 3]) -> Self {
+        let rgb: [f32; 3] = [
+            f32::from(rgb[0]) / 255.0,
+            f32::from(rgb[1]) / 255.0,
+            f32::from(rgb[2]) / 255.0,
+        ];
+        Self {
+            position: [x, y, z],
+            tex_coords,
             rgb,
         }
     }
@@ -90,7 +108,7 @@ impl<'a> Renderer<'a> {
         let vertex_buffer =
             glium::VertexBuffer::empty_dynamic(&display, num_points).unwrap();
         let draw_parameters = glium::DrawParameters {
-            point_size: Some(2.0),
+            point_size: Some(3.0),
             ..Default::default()
         };
         let text_system = glium_text::TextSystem::new(&display);
@@ -103,23 +121,23 @@ impl<'a> Renderer<'a> {
         .unwrap();
 
         let mut bounding_box = vec![
-            Vertex::new(-0.75, -0.75, [0, 0, 0]),
-            Vertex::new(-0.75, 0.75, [0, 0, 0]),
-            Vertex::new(-0.75, 0.75, [0, 0, 0]),
-            Vertex::new(0.75, 0.75, [0, 0, 0]),
-            Vertex::new(0.75, 0.75, [0, 0, 0]),
-            Vertex::new(0.75, -0.75, [0, 0, 0]),
-            Vertex::new(0.75, -0.75, [0, 0, 0]),
-            Vertex::new(-0.75, -0.75, [0, 0, 0]),
+            Vertex::new_2d(-0.75, -0.75, [0, 0, 0]),
+            Vertex::new_2d(-0.75, 0.75, [0, 0, 0]),
+            Vertex::new_2d(-0.75, 0.75, [0, 0, 0]),
+            Vertex::new_2d(0.75, 0.75, [0, 0, 0]),
+            Vertex::new_2d(0.75, 0.75, [0, 0, 0]),
+            Vertex::new_2d(0.75, -0.75, [0, 0, 0]),
+            Vertex::new_2d(0.75, -0.75, [0, 0, 0]),
+            Vertex::new_2d(-0.75, -0.75, [0, 0, 0]),
         ];
         for tick in linspace(-0.75, 0.75, 6) {
-            bounding_box.push(Vertex::new(tick, -0.70, [0, 0, 0]));
-            bounding_box.push(Vertex::new(tick, -0.75, [0, 0, 0]));
+            bounding_box.push(Vertex::new_2d(tick, -0.70, [0, 0, 0]));
+            bounding_box.push(Vertex::new_2d(tick, -0.75, [0, 0, 0]));
         }
 
         for tick in linspace(-0.75, 0.75, 5) {
-            bounding_box.push(Vertex::new(-0.70, tick, [0, 0, 0]));
-            bounding_box.push(Vertex::new(-0.75, tick, [0, 0, 0]));
+            bounding_box.push(Vertex::new_2d(-0.70, tick, [0, 0, 0]));
+            bounding_box.push(Vertex::new_2d(-0.75, tick, [0, 0, 0]));
         }
 
         Renderer {
@@ -163,6 +181,7 @@ impl<'a> Renderer<'a> {
         let plot_type = match config.plot_type {
             PlotType::Dot => glium::index::PrimitiveType::Points,
             PlotType::Line => glium::index::PrimitiveType::LineStrip,
+            PlotType::Heatmap => glium::index::PrimitiveType::Points,
         };
         let indices = glium::index::NoIndices(plot_type);
 
@@ -180,6 +199,30 @@ impl<'a> Renderer<'a> {
         self.draw_text(&mut target, config);
 
         target.finish().unwrap();
+    }
+
+    fn draw_heatmap(&mut self, vertices: &[Vertex], config: &FigureConfig) {
+        let (w, h) = self.display.get_framebuffer_dimensions();
+        let aspect = w as f32 / h as f32;
+        let ortho_mat = cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
+        let ortho: &[[f32; 4]; 4] = ortho_mat.as_ref();
+        let uniforms = uniform! {
+            projection: *ortho,
+        };
+        self.vertex_buffer.invalidate();
+
+        let mut target = self.display.draw();
+        target.clear_color(0.0, 0.0, 1.0, 1.0);
+
+        // If there are no vertices provided during this draw, draw the axes
+        // and stop.
+        if vertices.is_empty() {
+            self.draw_axis(&mut target);
+            self.draw_text(&mut target, config);
+
+            target.finish().unwrap();
+            return;
+        }
     }
 
     pub fn draw_text<S>(&mut self, target: &mut S, config: &FigureConfig)

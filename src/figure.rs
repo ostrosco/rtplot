@@ -1,6 +1,6 @@
 use crate::renderer::{Renderer, Vertex};
 use crate::utils;
-use cgmath::Point2;
+use cgmath::{Point2, Point3};
 use itertools_num::linspace;
 use num::Complex;
 use slice_deque::SliceDeque;
@@ -8,6 +8,7 @@ use slice_deque::SliceDeque;
 pub enum PlotType {
     Line,
     Dot,
+    Heatmap,
 }
 
 impl Default for PlotType {
@@ -183,7 +184,7 @@ impl<'a> Figure<'a> {
             } else {
                 1.5 * point.y - 0.75
             };
-            vertices.push(Vertex::new(x, y, self.config.color));
+            vertices.push(Vertex::new_2d(x, y, self.config.color));
         }
         vertices
     }
@@ -305,6 +306,13 @@ impl<'a> Figure<'a> {
             .map(|pt| Point2::new(pt.re.into(), pt.im.into()))
             .collect();
         self.plot(&points);
+    }
+
+    /// Plots a heatmap.
+    pub fn plot_heatmap<T>(&mut self, points: &[(T, T, T)])
+    where
+        T: Into<f32> + Copy,
+    {
     }
 
     /// Hijacks the current thread to run the plotting and event loop.

@@ -21,7 +21,7 @@ fn main() {
             .xlabel("Time (s)")
             .ylabel("Amplitude")
             .plot_type(PlotType::Dot)
-            .color(0x80, 0x00, 0x80);
+            .color(0x00, 0x00, 0x80);
 
         Figure::display(figure, |fig| {
             let sin_vals = calculate_sin(phase);
