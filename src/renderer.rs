@@ -157,7 +157,13 @@ impl<'a> Renderer<'a> {
         }
         let vb = match self.vertex_buffer.slice_mut(0..vertices.len()) {
             Some(slice) => slice,
-            None => return,
+            None => {
+                self.draw_axis(&mut target);
+                self.draw_text(&mut target, config);
+
+                target.finish().unwrap();
+                return;
+            }
         };
         vb.write(&vertices);
         let plot_type = match config.plot_type {
@@ -166,7 +172,16 @@ impl<'a> Renderer<'a> {
         };
         let indices = glium::index::NoIndices(plot_type);
 
-        let vb = self.vertex_buffer.slice(0..vertices.len()).unwrap();
+        let vb = match self.vertex_buffer.slice(0..vertices.len()) {
+            Some(slice) => slice,
+            None => {
+                self.draw_axis(&mut target);
+                self.draw_text(&mut target, config);
+
+                target.finish().unwrap();
+                return;
+            }
+        };
         target
             .draw(
                 vb,

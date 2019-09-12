@@ -22,7 +22,7 @@ fn generate_symbol() -> Complex<f32> {
 
 fn main() {
     let handle = thread::spawn(move || {
-        let mut figure = Figure::new()
+        let figure = Figure::new()
             .init_renderer(10000)
             .xlim([-1.0, 1.0])
             .ylim([-1.0, 1.0])

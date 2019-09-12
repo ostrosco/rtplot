@@ -14,7 +14,7 @@ fn calculate_sin(phase: f32) -> Vec<f32> {
 fn main() {
     let mut phase = 0.0;
     let handle = thread::spawn(move || {
-        let mut figure = Figure::new()
+        let figure = Figure::new()
             .init_renderer(10000)
             .xlim([-0.5, 0.5])
             .ylim([-10.0, 10.0])
