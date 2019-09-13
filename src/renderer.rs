@@ -88,7 +88,7 @@ impl<'a> Renderer<'a> {
         )
         .unwrap();
         let vertex_buffer =
-            glium::VertexBuffer::empty_dynamic(&display, 500_000).unwrap();
+            glium::VertexBuffer::empty_dynamic(&display, 50000).unwrap();
         let draw_parameters = glium::DrawParameters {
             point_size: Some(2.0),
             ..Default::default()
