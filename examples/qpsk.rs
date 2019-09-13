@@ -22,13 +22,13 @@ fn generate_symbol() -> Complex<f32> {
 
 fn main() {
     let handle = thread::spawn(move || {
-        let figure = Figure::new()
+        let mut figure = Figure::new()
             .init_renderer(10000)
             .xlim([-1.0, 1.0])
             .ylim([-1.0, 1.0])
             .plot_type(PlotType::Dot)
             .color(0x50, 0x20, 0x50);
-        Figure::display(figure, |fig| {
+        Figure::display(&mut figure, |fig| {
             let symbol = generate_symbol();
             fig.plot_complex_stream(&[symbol]);
         });

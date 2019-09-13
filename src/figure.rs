@@ -5,6 +5,7 @@ use itertools_num::linspace;
 use num::Complex;
 use slice_deque::SliceDeque;
 
+#[derive(Copy, Clone, Debug)]
 pub enum PlotType {
     Line,
     Dot,
@@ -16,7 +17,7 @@ impl Default for PlotType {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct FigureConfig<'a> {
     // The min and max bounds of the x axis. If set to None, x-axis will be
     // autoscaled. Defaults to None.
@@ -85,7 +86,7 @@ impl<'a> Figure<'a> {
     /// As nothing is Send, this is used to initialize the renderer in the
     /// thread once you make the object.
     pub fn init_renderer(mut self, num_points: usize) -> Self {
-        self.renderer = Some(Renderer::new(num_points));
+        self.renderer = Some(Renderer::new());
         self.config.num_points = num_points;
         self
     }
@@ -308,14 +309,14 @@ impl<'a> Figure<'a> {
     }
 
     /// Hijacks the current thread to run the plotting and event loop.
-    pub fn display(mut figure: Figure, mut plot_fn: impl FnMut(&mut Figure)) {
+    pub fn display(figure: &mut Figure, mut plot_fn: impl FnMut(&mut Figure)) {
         let mut status = true;
         loop {
             if !status {
                 break;
             }
             status = figure.handle_events();
-            plot_fn(&mut figure);
+            plot_fn(figure);
         }
     }
 }

@@ -14,7 +14,7 @@ fn calculate_sin(phase: f32) -> Vec<f32> {
 fn main() {
     let mut phase = 0.0;
     let handle = thread::spawn(move || {
-        let figure = Figure::new()
+        let mut figure = Figure::new()
             .init_renderer(10000)
             .xlim([-0.5, 0.5])
             .ylim([-10.0, 10.0])
@@ -23,7 +23,7 @@ fn main() {
             .plot_type(PlotType::Dot)
             .color(0x80, 0x00, 0x80);
 
-        Figure::display(figure, |fig| {
+        Figure::display(&mut figure, |fig| {
             let sin_vals = calculate_sin(phase);
             fig.plot_y(&sin_vals);
             phase += PI / 20.0;
