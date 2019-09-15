@@ -4,27 +4,32 @@ use glium::uniform;
 use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
 use itertools_num::linspace;
+use lyon::math::{point, Point};
+use lyon::tessellation::basic_shapes::{
+    fill_circle, fill_polyline, stroke_polyline, stroke_quad,
+};
+use lyon::tessellation::geometry_builder::{
+    BuffersBuilder, VertexBuffers, VertexConstructor,
+};
+use lyon::tessellation::*;
+use lyon::tessellation::{FillOptions, StrokeOptions};
 
 pub static VERTEX_SHADER: &str = r#"
     #version 140
-
-    in vec2 position;
+    in vec3 position;
     in vec3 rgb;
     out vec3 rgb_frag;
     uniform mat4 projection;
-
     void main() {
-        gl_Position = projection * vec4(position, 0.0, 1.0);
+        gl_Position = projection * vec4(position, 1.0);
         rgb_frag = rgb;
     }
 "#;
 
 pub static FRAGMENT_SHADER: &str = r#"
     #version 140
-
     in vec3 rgb_frag;
     out vec4 color;
-
     void main() {
         color = vec4(rgb_frag, 1.0);
     }
@@ -32,7 +37,7 @@ pub static FRAGMENT_SHADER: &str = r#"
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
-    position: [f32; 2],
+    position: [f32; 3],
     rgb: [f32; 3],
 }
 
@@ -46,34 +51,82 @@ impl Vertex {
             f32::from(rgb[2]) / 255.0,
         ];
         Vertex {
-            position: [x, y],
+            position: [x, y, 0.0],
             rgb,
         }
     }
 }
 
-pub struct Renderer<'a> {
+enum ZDepth {
+    Near,
+    Far,
+}
+
+struct VertexCtor([u8; 3], ZDepth);
+impl VertexConstructor<lyon::tessellation::StrokeVertex, Vertex>
+    for VertexCtor
+{
+    fn new_vertex(
+        &mut self,
+        vertex: lyon::tessellation::StrokeVertex,
+    ) -> Vertex {
+        let rgb: [f32; 3] = [
+            f32::from(self.0[0]) / 255.0,
+            f32::from(self.0[1]) / 255.0,
+            f32::from(self.0[2]) / 255.0,
+        ];
+        let pos = vertex.position.to_array();
+        let position = match self.1 {
+            ZDepth::Far => [pos[0], pos[1], 0.0],
+            ZDepth::Near => [pos[0], pos[1], 1.0],
+        };
+        Vertex { position, rgb }
+    }
+}
+
+impl VertexConstructor<lyon::tessellation::FillVertex, Vertex> for VertexCtor {
+    fn new_vertex(&mut self, vertex: lyon::tessellation::FillVertex) -> Vertex {
+        let rgb: [f32; 3] = [
+            f32::from(self.0[0]) / 255.0,
+            f32::from(self.0[1]) / 255.0,
+            f32::from(self.0[2]) / 255.0,
+        ];
+        let pos = vertex.position.to_array();
+        let position = match self.1 {
+            ZDepth::Far => [pos[0], pos[1], 0.0],
+            ZDepth::Near => [pos[0], pos[1], 1.0],
+        };
+        Vertex { position, rgb }
+    }
+}
+
+pub struct Window<'a> {
     pub events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     program: glium::Program,
-    vertex_buffer: glium::VertexBuffer<Vertex>,
     draw_parameters: glium::DrawParameters<'a>,
     text_system: glium_text::TextSystem,
     font: glium_text::FontTexture,
-    bounding_box: Vec<Vertex>,
 }
 
-impl<'a> Renderer<'a> {
+impl<'a> Default for Window<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a> Window<'a> {
     pub fn new() -> Self {
         let events_loop = glium::glutin::EventsLoop::new();
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
             .with_double_buffer(Some(true))
+            .with_depth_buffer(24)
             .with_multisampling(2);
         let window = glium::glutin::WindowBuilder::new()
             .with_dimensions(LogicalSize {
-                width: 640.0,
-                height: 480.0,
+                width: 800.0,
+                height: 800.0,
             })
             .with_decorations(true)
             .with_title("Plot");
@@ -87,12 +140,16 @@ impl<'a> Renderer<'a> {
             None,
         )
         .unwrap();
-        let vertex_buffer =
-            glium::VertexBuffer::empty_dynamic(&display, 50000).unwrap();
+
         let draw_parameters = glium::DrawParameters {
-            point_size: Some(2.0),
+            depth: glium::Depth {
+                write: true,
+                test: glium::DepthTest::IfLess,
+                ..Default::default()
+            },
             ..Default::default()
         };
+
         let text_system = glium_text::TextSystem::new(&display);
         let font = glium_text::FontTexture::new(
             &display,
@@ -102,39 +159,58 @@ impl<'a> Renderer<'a> {
         )
         .unwrap();
 
-        let mut bounding_box = vec![
-            Vertex::new(-0.75, -0.75, [0, 0, 0]),
-            Vertex::new(-0.75, 0.75, [0, 0, 0]),
-            Vertex::new(-0.75, 0.75, [0, 0, 0]),
-            Vertex::new(0.75, 0.75, [0, 0, 0]),
-            Vertex::new(0.75, 0.75, [0, 0, 0]),
-            Vertex::new(0.75, -0.75, [0, 0, 0]),
-            Vertex::new(0.75, -0.75, [0, 0, 0]),
-            Vertex::new(-0.75, -0.75, [0, 0, 0]),
-        ];
-        for tick in linspace(-0.75, 0.75, 6) {
-            bounding_box.push(Vertex::new(tick, -0.70, [0, 0, 0]));
-            bounding_box.push(Vertex::new(tick, -0.75, [0, 0, 0]));
-        }
-
-        for tick in linspace(-0.75, 0.75, 5) {
-            bounding_box.push(Vertex::new(-0.70, tick, [0, 0, 0]));
-            bounding_box.push(Vertex::new(-0.75, tick, [0, 0, 0]));
-        }
-
-        Renderer {
+        Self {
             events_loop,
             display,
             program,
-            vertex_buffer,
             draw_parameters,
             text_system,
             font,
-            bounding_box,
         }
     }
 
     pub fn draw(&mut self, vertices: &[Vertex], config: &FigureConfig) {
+        let mut target = self.display.draw();
+        let color = (169.0 / 255.0, 169.0 / 255.0, 169.0 / 255.0, 1.0);
+        target.clear_color_and_depth(color, 1.0);
+        let mut mesh: VertexBuffers<Vertex, u16> = VertexBuffers::new();
+        self.draw_text(&mut target, config);
+        self.draw_grid(&mut mesh);
+
+        let points: Vec<Point> = vertices
+            .iter()
+            .map(|x| point(x.position[0], x.position[1]))
+            .collect();
+
+        match config.plot_type {
+            PlotType::Line => {
+                stroke_polyline(
+                    points.iter().cloned(),
+                    false,
+                    &StrokeOptions::tolerance(0.01).with_line_width(0.002),
+                    &mut BuffersBuilder::new(
+                        &mut mesh,
+                        VertexCtor(config.color, ZDepth::Near),
+                    ),
+                )
+                .unwrap();
+            }
+            PlotType::Dot => {
+                for point in points {
+                    fill_circle(
+                        point,
+                        0.01,
+                        &FillOptions::tolerance(0.01),
+                        &mut BuffersBuilder::new(
+                            &mut mesh,
+                            VertexCtor(config.color, ZDepth::Near),
+                        ),
+                    )
+                    .unwrap();
+                }
+            }
+        }
+
         let (w, h) = self.display.get_framebuffer_dimensions();
         let aspect = w as f32 / h as f32;
         let ortho_mat = cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
@@ -142,57 +218,25 @@ impl<'a> Renderer<'a> {
         let uniforms = uniform! {
             projection: *ortho,
         };
-        self.vertex_buffer.invalidate();
 
-        let mut target = self.display.draw();
-        target.clear_color(0.8, 0.8, 0.8, 1.0);
-        // If there are no vertices provided during this draw, draw the axes
-        // and stop.
-        if vertices.is_empty() {
-            self.draw_axis(&mut target);
-            self.draw_text(&mut target, config);
+        let vertex_buffer =
+            glium::VertexBuffer::new(&self.display, &mesh.vertices).unwrap();
+        let indices = glium::IndexBuffer::new(
+            &self.display,
+            glium::index::PrimitiveType::TrianglesList,
+            &mesh.indices,
+        )
+        .unwrap();
 
-            target.finish().unwrap();
-            return;
-        }
-        let vb = match self.vertex_buffer.slice_mut(0..vertices.len()) {
-            Some(slice) => slice,
-            None => {
-                self.draw_axis(&mut target);
-                self.draw_text(&mut target, config);
-
-                target.finish().unwrap();
-                return;
-            }
-        };
-        vb.write(&vertices);
-        let plot_type = match config.plot_type {
-            PlotType::Dot => glium::index::PrimitiveType::Points,
-            PlotType::Line => glium::index::PrimitiveType::LineStrip,
-        };
-        let indices = glium::index::NoIndices(plot_type);
-
-        let vb = match self.vertex_buffer.slice(0..vertices.len()) {
-            Some(slice) => slice,
-            None => {
-                self.draw_axis(&mut target);
-                self.draw_text(&mut target, config);
-
-                target.finish().unwrap();
-                return;
-            }
-        };
         target
             .draw(
-                vb,
+                &vertex_buffer,
                 &indices,
                 &self.program,
                 &uniforms,
                 &self.draw_parameters,
             )
             .unwrap();
-        self.draw_axis(&mut target);
-        self.draw_text(&mut target, config);
 
         target.finish().unwrap();
     }
@@ -306,27 +350,57 @@ impl<'a> Renderer<'a> {
         }
     }
 
-    pub fn draw_axis<S>(&mut self, target: &mut S)
-    where
-        S: glium::Surface,
-    {
-        self.vertex_buffer.invalidate();
-        let vb = match self.vertex_buffer.slice_mut(0..30) {
-            Some(slice) => slice,
-            None => return,
-        };
-        vb.write(&self.bounding_box);
-        let indices =
-            glium::index::NoIndices(glium::index::PrimitiveType::LinesList);
-        let vb = self.vertex_buffer.slice(0..30).unwrap();
-        target
-            .draw(
-                vb,
-                &indices,
-                &self.program,
-                &glium::uniforms::EmptyUniforms,
-                &self.draw_parameters,
+    fn draw_grid(&mut self, mesh: &mut VertexBuffers<Vertex, u16>) {
+        let mut tessellator = FillTessellator::new();
+
+        for tick in linspace(-0.75, 0.75, 6) {
+            fill_polyline(
+                [
+                    point(tick - 0.001, 0.75),
+                    point(tick - 0.001, -0.75),
+                    point(tick + 0.001, -0.75),
+                    point(tick + 0.001, 0.75),
+                ]
+                .iter()
+                .cloned(),
+                &mut tessellator,
+                &FillOptions::tolerance(0.01),
+                &mut BuffersBuilder::new(
+                    mesh,
+                    VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far),
+                ),
             )
             .unwrap();
+        }
+
+        for tick in linspace(-0.75, 0.75, 5) {
+            fill_polyline(
+                [
+                    point(0.75, tick - 0.001),
+                    point(-0.75, tick - 0.001),
+                    point(-0.75, tick + 0.001),
+                    point(0.75, tick + 0.001),
+                ]
+                .iter()
+                .cloned(),
+                &mut tessellator,
+                &FillOptions::tolerance(0.01),
+                &mut BuffersBuilder::new(
+                    mesh,
+                    VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far),
+                ),
+            )
+            .unwrap();
+        }
+
+        stroke_quad(
+            point(-0.75, -0.75),
+            point(-0.75, 0.75),
+            point(0.75, 0.75),
+            point(0.75, -0.75),
+            &StrokeOptions::tolerance(0.01).with_line_width(0.001),
+            &mut BuffersBuilder::new(mesh, VertexCtor([0, 0, 0], ZDepth::Near)),
+        )
+        .unwrap();
     }
 }
