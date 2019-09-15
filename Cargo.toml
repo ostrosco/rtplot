@@ -5,13 +5,15 @@ authors = ["ostrosco <ostrosco@fastmail.fm>"]
 edition = "2018"
 
 [dependencies]
-glium = "0.22"
+glium = "0.25.1"
 cgmath = "0.17"
-glium_text_rusttype = "0.3"
+imgui = "0.2"
+imgui-glium-renderer = "0.2"
+imgui-winit-support = "0.2"
 itertools-num = "0.1"
 num = "0.2"
-ttf-noto-sans = "0.1"
 slice-deque = "0.1"
+ttf-noto-sans = "0.1"
 
 [dev-dependencies]
 rand = "0.6"

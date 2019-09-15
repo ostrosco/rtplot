@@ -15,7 +15,7 @@ fn main() {
     let mut phase = 0.0;
     let handle = thread::spawn(move || {
         let figure = Figure::new()
-            .init_renderer(10000)
+            .init_window_state(10000)
             .xlim([-0.5, 0.5])
             .ylim([-10.0, 10.0])
             .xlabel("Time (s)")
