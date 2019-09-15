@@ -7,11 +7,13 @@ edition = "2018"
 [dependencies]
 glium = "0.22"
 cgmath = "0.17"
-glium_text_rusttype = "0.3"
+glium_text_rusttype = "0.3.2"
+lyon = "0.14"
+lyon_path = "0.14"
 itertools-num = "0.1"
 num = "0.2"
-ttf-noto-sans = "0.1"
 slice-deque = "0.1"
+ttf-noto-sans = "0.1"
 
 [dev-dependencies]
 rand = "0.6"

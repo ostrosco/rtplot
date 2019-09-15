@@ -1,4 +1,4 @@
-use crate::renderer::{Renderer, Vertex};
+use crate::window::{Vertex, Window};
 use crate::utils;
 use cgmath::Point2;
 use itertools_num::linspace;
@@ -38,7 +38,7 @@ pub struct FigureConfig<'a> {
     pub color: [u8; 3],
 
     // The number of points. Defaults to 0. Set this by calling
-    // Figure::init_renderer().
+    // Figure::init_window().
     pub num_points: usize,
 
     // The type of plot to draw. Defaults to a dot plot.
@@ -49,7 +49,7 @@ pub struct FigureConfig<'a> {
 /// Creates a figure that will wait to receive samples, then draw them onto the
 /// plot.
 pub struct Figure<'a> {
-    pub renderer: Option<Renderer<'a>>,
+    pub window: Option<Window<'a>>,
     pub config: FigureConfig<'a>,
     // A queue holding samples if the figure is going to be used for streaming
     // plotting. Size is capped at `config.num_points`.
@@ -63,7 +63,7 @@ impl<'a> Figure<'a> {
     /// Create a figure with default settings.
     pub fn new() -> Self {
         Self {
-            renderer: None,
+            window: None,
             config: FigureConfig::default(),
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
@@ -74,19 +74,19 @@ impl<'a> Figure<'a> {
     /// want to use the builder pattern to initialize a figure from scratch.
     pub fn new_with_config(config: FigureConfig<'a>) -> Self {
         Self {
-            renderer: None,
+            window: None,
             config,
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
         }
     }
 
-    /// Initializes the renderer. Must be called before plotting.
+    /// Initializes the window. Must be called before plotting.
     ///
-    /// As nothing is Send, this is used to initialize the renderer in the
+    /// As nothing is Send, this is used to initialize the window in the
     /// thread once you make the object.
-    pub fn init_renderer(mut self, num_points: usize) -> Self {
-        self.renderer = Some(Renderer::new());
+    pub fn init_window(mut self, num_points: usize) -> Self {
+        self.window = Some(Window::new());
         self.config.num_points = num_points;
         self
     }
@@ -132,9 +132,9 @@ impl<'a> Figure<'a> {
     pub fn handle_events(&mut self) -> bool {
         let mut status = true;
 
-        let events_loop = match self.renderer {
+        let events_loop = match self.window {
             Some(ref mut rend) => &mut rend.events_loop,
-            None => panic!("uninitialized renderer"),
+            None => panic!("uninitialized window"),
         };
 
         events_loop.poll_events(|event| {
@@ -191,11 +191,11 @@ impl<'a> Figure<'a> {
 
     fn plot(&mut self, points: &[Point2<f32>]) {
         let vertices = self.normalize(&points);
-        match self.renderer {
+        match self.window {
             Some(ref mut render) => {
                 render.draw(&vertices, &self.config);
             }
-            None => panic!("Uninitialized renderer for figure"),
+            None => panic!("Uninitialized window for figure"),
         }
     }
 
@@ -250,11 +250,11 @@ impl<'a> Figure<'a> {
             .map(|(x, y)| Point2::new(x, *y))
             .collect();
         let vertices = self.normalize(&points);
-        match self.renderer {
+        match self.window {
             Some(ref mut render) => {
                 render.draw(&vertices, &self.config);
             }
-            None => panic!("Uninitialized renderer for figure"),
+            None => panic!("Uninitialized window for figure"),
         }
     }
 
@@ -287,11 +287,11 @@ impl<'a> Figure<'a> {
             .map(|x| Point2::new(x.re, x.im))
             .collect();
         let vertices = self.normalize(&points);
-        match self.renderer {
+        match self.window {
             Some(ref mut render) => {
                 render.draw(&vertices, &self.config);
             }
-            None => panic!("Uninitialized renderer for figure"),
+            None => panic!("Uninitialized window for figure"),
         }
     }
 
