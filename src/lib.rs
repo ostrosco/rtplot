@@ -3,7 +3,7 @@
 //!
 
 mod figure;
-mod window;
 mod utils;
+mod window;
 
 pub use figure::{Figure, FigureConfig, PlotType};

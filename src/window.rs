@@ -173,7 +173,7 @@ impl<'a> Window<'a> {
         let mut target = self.display.draw();
         let color = (169.0 / 255.0, 169.0 / 255.0, 169.0 / 255.0, 1.0);
         target.clear_color_and_depth(color, 1.0);
-        let mut mesh: VertexBuffers<Vertex, u16> = VertexBuffers::new();
+        let mut mesh: VertexBuffers<Vertex, u32> = VertexBuffers::new();
         self.draw_text(&mut target, config);
         self.draw_grid(&mut mesh);
 
@@ -193,7 +193,7 @@ impl<'a> Window<'a> {
                         VertexCtor(config.color, ZDepth::Near),
                     ),
                 )
-                .unwrap();
+                .expect("Could not draw line plot");
             }
             PlotType::Dot => {
                 for point in points {
@@ -206,7 +206,7 @@ impl<'a> Window<'a> {
                             VertexCtor(config.color, ZDepth::Near),
                         ),
                     )
-                    .unwrap();
+                    .expect("Could not draw dot plot");
                 }
             }
         }
@@ -220,13 +220,14 @@ impl<'a> Window<'a> {
         };
 
         let vertex_buffer =
-            glium::VertexBuffer::new(&self.display, &mesh.vertices).unwrap();
+            glium::VertexBuffer::new(&self.display, &mesh.vertices)
+                .expect("Could not create vertex buffer");
         let indices = glium::IndexBuffer::new(
             &self.display,
             glium::index::PrimitiveType::TrianglesList,
             &mesh.indices,
         )
-        .unwrap();
+        .expect("Could not create index buffer");
 
         target
             .draw(
@@ -236,9 +237,9 @@ impl<'a> Window<'a> {
                 &uniforms,
                 &self.draw_parameters,
             )
-            .unwrap();
+            .expect("Could not draw the frame");
 
-        target.finish().unwrap();
+        target.finish().expect("Could not finish the frame");
     }
 
     pub fn draw_text<S>(&mut self, target: &mut S, config: &FigureConfig)
@@ -269,7 +270,7 @@ impl<'a> Window<'a> {
                 matrix,
                 (0.0, 0.0, 0.0, 1.0),
             )
-            .unwrap();
+            .expect("Could not draw x label");
         }
         if let Some(text) = config.ylabel {
             let label = glium_text::TextDisplay::new(
@@ -292,7 +293,7 @@ impl<'a> Window<'a> {
                 matrix,
                 (0.0, 0.0, 0.0, 1.0),
             )
-            .unwrap();
+            .expect("Could not draw y label");
         }
         if let Some([xmin, xmax]) = config.xlim {
             for (coord, tick) in
@@ -318,7 +319,7 @@ impl<'a> Window<'a> {
                     matrix,
                     (0.0, 0.0, 0.0, 1.0),
                 )
-                .unwrap();
+                .expect("Could not draw x axis values");
             }
         }
         if let Some([ymin, ymax]) = config.ylim {
@@ -345,12 +346,12 @@ impl<'a> Window<'a> {
                     matrix,
                     (0.0, 0.0, 0.0, 1.0),
                 )
-                .unwrap();
+                .expect("Could not draw y axis labels");
             }
         }
     }
 
-    fn draw_grid(&mut self, mesh: &mut VertexBuffers<Vertex, u16>) {
+    fn draw_grid(&mut self, mesh: &mut VertexBuffers<Vertex, u32>) {
         let mut tessellator = FillTessellator::new();
 
         for tick in linspace(-0.75, 0.75, 6) {
@@ -370,7 +371,7 @@ impl<'a> Window<'a> {
                     VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far),
                 ),
             )
-            .unwrap();
+            .expect("Could not draw grid");
         }
 
         for tick in linspace(-0.75, 0.75, 5) {
@@ -390,7 +391,7 @@ impl<'a> Window<'a> {
                     VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far),
                 ),
             )
-            .unwrap();
+            .expect("Could not draw grid");
         }
 
         stroke_quad(
