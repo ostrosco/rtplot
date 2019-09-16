@@ -1,5 +1,5 @@
-use crate::window::{Vertex, Window};
 use crate::utils;
+use crate::window::{Vertex, Window};
 use cgmath::Point2;
 use itertools_num::linspace;
 use num::Complex;
