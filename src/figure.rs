@@ -7,7 +7,10 @@ use slice_deque::SliceDeque;
 
 #[derive(Copy, Clone, Debug)]
 pub enum PlotType {
+    /// Draws a continuous line between points.
     Line,
+
+    /// Each point is drawn as a small diamond.
     Dot,
 }
 
@@ -19,29 +22,25 @@ impl Default for PlotType {
 
 #[derive(Clone, Default)]
 pub struct FigureConfig<'a> {
-    // The min and max bounds of the x axis. If set to None, x-axis will be
-    // autoscaled. Defaults to None.
+    /// The min and max bounds of the x axis. If set to None, x-axis will be
+    /// autoscaled. Defaults to None.
     pub xlim: Option<[f32; 2]>,
 
-    // The min and max bounds of the y axis. If set to None, y-axis will be
-    // autoscaled. Defaults to None.
+    /// The min and max bounds of the y axis. If set to None, y-axis will be
+    /// autoscaled. Defaults to None.
     pub ylim: Option<[f32; 2]>,
 
-    // A label for the x-axis. Defaults to None.
+    /// A label for the x-axis. Defaults to None.
     pub xlabel: Option<&'a str>,
 
-    // A label for the y-axis. Defaults to None.
+    /// A label for the y-axis. Defaults to None.
     pub ylabel: Option<&'a str>,
 
-    // The color of points or lines to be drawn onto the graph. Defaults to
-    // 0x000000, or black.
+    /// The color of points or lines to be drawn onto the graph. Defaults to
+    /// 0x000000, or black.
     pub color: [u8; 3],
 
-    // The number of points. Defaults to 0. Set this by calling
-    // Figure::init_window().
-    pub num_points: usize,
-
-    // The type of plot to draw. Defaults to a dot plot.
+    /// The type of plot to draw. Defaults to a dot plot.
     pub plot_type: PlotType,
 }
 
@@ -49,46 +48,45 @@ pub struct FigureConfig<'a> {
 /// Creates a figure that will wait to receive samples, then draw them onto the
 /// plot.
 pub struct Figure<'a> {
-    pub window: Option<Window<'a>>,
-    pub config: FigureConfig<'a>,
-    // A queue holding samples if the figure is going to be used for streaming
-    // plotting. Size is capped at `config.num_points`.
-    pub samples: SliceDeque<f32>,
+    window: Window<'a>,
+    config: FigureConfig<'a>,
 
-    // A queue holding complex samples as above.
-    pub complex_samples: SliceDeque<Complex<f32>>,
+    /// A queue holding samples if the figure is going to be used for streaming
+    /// plotting. Size is capped at `queue_size`.
+    samples: SliceDeque<f32>,
+
+    /// A queue holding complex samples as above.
+    complex_samples: SliceDeque<Complex<f32>>,
+
+    /// The number of points. Defaults to 0.
+    queue_size: usize,
 }
 
 impl<'a> Figure<'a> {
     /// Create a figure with default settings.
-    pub fn new() -> Self {
+    pub fn new(queue_size: usize) -> Self {
         Self {
-            window: None,
+            window: Window::new(),
             config: FigureConfig::default(),
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
+            queue_size,
         }
     }
 
     /// Create a figure from an existing configuration. Useful if you don't
     /// want to use the builder pattern to initialize a figure from scratch.
-    pub fn new_with_config(config: FigureConfig<'a>) -> Self {
+    pub fn new_with_config(
+        config: FigureConfig<'a>,
+        queue_size: usize,
+    ) -> Self {
         Self {
-            window: None,
+            window: Window::new(),
             config,
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
+            queue_size,
         }
-    }
-
-    /// Initializes the window. Must be called before plotting.
-    ///
-    /// As nothing is Send, this is used to initialize the window in the
-    /// thread once you make the object.
-    pub fn init_window(mut self, num_points: usize) -> Self {
-        self.window = Some(Window::new());
-        self.config.num_points = num_points;
-        self
     }
 
     /// Sets the x min and max limits for plotting.
@@ -103,39 +101,38 @@ impl<'a> Figure<'a> {
         self
     }
 
+    /// Sets the x label to display.
     pub fn xlabel(mut self, xlabel: &'a str) -> Self {
         self.config.xlabel = Some(xlabel);
         self
     }
 
+    /// Sets the y label to display.
     pub fn ylabel(mut self, ylabel: &'a str) -> Self {
         self.config.ylabel = Some(ylabel);
         self
     }
 
+    /// Sets the color of the line to draw.
     pub fn color(mut self, r: u8, g: u8, b: u8) -> Self {
         self.config.color = [r, g, b];
         self
     }
 
+    /// Sets the type of plot to generate.
     pub fn plot_type(mut self, plot_type: PlotType) -> Self {
         self.config.plot_type = plot_type;
         self
     }
 
-    /// Returns if the escape key has been pressed.
-    ///
-    /// As the event loop is not thread safe, checking for a keypress has to be
-    /// done in the main thread. This is a helper function for users who choose
-    /// to have the Escape key close the thread.
-    ///
-    pub fn handle_events(&mut self) -> bool {
-        let mut status = true;
+    /// Checks events to see if the figure should close or not. Returns
+    /// true if the window received a close event, false otherwise. In
+    /// most cases, you don't need to handle events yourself; use
+    /// Figure::display() instead.
+    pub fn should_close_window(&mut self) -> bool {
+        let mut should_close_window = false;
 
-        let events_loop = match self.window {
-            Some(ref mut rend) => &mut rend.events_loop,
-            None => panic!("uninitialized window"),
-        };
+        let events_loop = &mut self.window.events_loop;
 
         events_loop.poll_events(|event| {
             use glium::glutin::{Event, WindowEvent};
@@ -143,16 +140,17 @@ impl<'a> Figure<'a> {
             match event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::Destroyed | WindowEvent::CloseRequested => {
-                        status = false
+                        should_close_window = true
                     }
                     _ => (),
                 },
                 _ => (),
             }
         });
-        status
+        should_close_window
     }
 
+    /// Normalizes the received points to [-0.5, 0.5] for drawing in OpenGL.
     fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex> {
         let [min_x, max_x] = match self.config.xlim {
             Some(lim) => lim,
@@ -189,14 +187,10 @@ impl<'a> Figure<'a> {
         vertices
     }
 
+    /// A helper function for normalizing and drawing points to the window.
     fn plot(&mut self, points: &[Point2<f32>]) {
         let vertices = self.normalize(&points);
-        match self.window {
-            Some(ref mut render) => {
-                render.draw(&vertices, &self.config);
-            }
-            None => panic!("Uninitialized window for figure"),
-        }
+        self.window.draw(&vertices, &self.config);
     }
 
     /// Take an array of 2D points and draw them to the plot. This overrides
@@ -233,10 +227,8 @@ impl<'a> Figure<'a> {
     where
         T: Into<f32> + Copy,
     {
-        if self.samples.len() >= self.config.num_points + y_coords.len() {
-            for _ in
-                0..self.samples.len() - self.config.num_points + y_coords.len()
-            {
+        if self.samples.len() >= self.queue_size + y_coords.len() {
+            for _ in 0..self.samples.len() - self.queue_size + y_coords.len() {
                 self.samples.pop_front();
             }
         }
@@ -244,18 +236,13 @@ impl<'a> Figure<'a> {
         for point in &y {
             self.samples.push_back(*point);
         }
-        let x_coords = linspace(-0.5f32, 0.5f32, self.config.num_points);
+        let x_coords = linspace(-0.5f32, 0.5f32, self.queue_size);
         let points: Vec<Point2<f32>> = x_coords
             .zip(self.samples.iter())
             .map(|(x, y)| Point2::new(x, *y))
             .collect();
         let vertices = self.normalize(&points);
-        match self.window {
-            Some(ref mut render) => {
-                render.draw(&vertices, &self.config);
-            }
-            None => panic!("Uninitialized window for figure"),
-        }
+        self.window.draw(&vertices, &self.config);
     }
 
     /// Takes a slice of complex samples and draws them onto the plot. Samples
@@ -265,9 +252,9 @@ impl<'a> Figure<'a> {
     where
         T: Into<f32> + Copy,
     {
-        if self.complex_samples.len() >= self.config.num_points + points.len() {
-            for _ in 0..self.complex_samples.len() - self.config.num_points
-                + points.len()
+        if self.complex_samples.len() >= self.queue_size + points.len() {
+            for _ in
+                0..self.complex_samples.len() - self.queue_size + points.len()
             {
                 self.complex_samples.pop_front();
             }
@@ -287,12 +274,7 @@ impl<'a> Figure<'a> {
             .map(|x| Point2::new(x.re, x.im))
             .collect();
         let vertices = self.normalize(&points);
-        match self.window {
-            Some(ref mut render) => {
-                render.draw(&vertices, &self.config);
-            }
-            None => panic!("Uninitialized window for figure"),
-        }
+        self.window.draw(&vertices, &self.config);
     }
 
     /// Takes a slice of complex samples and draws them onto the plot. This
@@ -310,12 +292,7 @@ impl<'a> Figure<'a> {
 
     /// Hijacks the current thread to run the plotting and event loop.
     pub fn display(figure: &mut Figure, mut plot_fn: impl FnMut(&mut Figure)) {
-        let mut status = true;
-        loop {
-            if !status {
-                break;
-            }
-            status = figure.handle_events();
+        while !figure.should_close_window() {
             plot_fn(figure);
         }
     }
