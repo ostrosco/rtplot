@@ -242,7 +242,7 @@ impl<'a> Window<'a> {
         target.finish().expect("Could not finish the frame");
     }
 
-    pub fn draw_text<S>(&mut self, target: &mut S, config: &FigureConfig)
+    fn draw_text<S>(&mut self, target: &mut S, config: &FigureConfig)
     where
         S: glium::Surface,
     {

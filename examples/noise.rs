@@ -6,8 +6,7 @@ fn main() {
     let handle = thread::spawn(move || {
         let normal = Normal::new(0.0, 1.0);
         let mut rng = rand::thread_rng();
-        let mut figure = Figure::new()
-            .init_window(100)
+        let mut figure = Figure::new(100)
             .ylim([-1.0, 1.0])
             .xlabel("Time (s)")
             .ylabel("Amplitude")
