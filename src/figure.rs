@@ -60,6 +60,12 @@ pub struct Figure<'a> {
 
     /// The number of points. Defaults to 0.
     queue_size: usize,
+
+    /// Indicates whether the x axis is dynamic.
+    x_dynamic: bool,
+
+    /// Indicates whether the y axis is dynamic.
+    y_dynamic: bool,
 }
 
 impl<'a> Figure<'a> {
@@ -71,6 +77,8 @@ impl<'a> Figure<'a> {
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
             queue_size,
+            x_dynamic: true,
+            y_dynamic: true,
         }
     }
 
@@ -80,24 +88,30 @@ impl<'a> Figure<'a> {
         config: FigureConfig<'a>,
         queue_size: usize,
     ) -> Self {
+        let x_dynamic = config.xlim.is_none();
+        let y_dynamic = config.ylim.is_none();
         Self {
             window: Window::new(),
             config,
             samples: SliceDeque::new(),
             complex_samples: SliceDeque::new(),
             queue_size,
+            x_dynamic,
+            y_dynamic,
         }
     }
 
     /// Sets the x min and max limits for plotting.
     pub fn xlim(mut self, xlim: [f32; 2]) -> Self {
         self.config.xlim = Some(xlim);
+        self.x_dynamic = false;
         self
     }
 
     /// Sets the y min and max limits for plotting.
     pub fn ylim(mut self, ylim: [f32; 2]) -> Self {
         self.config.ylim = Some(ylim);
+        self.y_dynamic = false;
         self
     }
 
@@ -151,14 +165,20 @@ impl<'a> Figure<'a> {
     }
 
     /// Normalizes the received points to [-0.5, 0.5] for drawing in OpenGL.
-    fn normalize(&self, points: &[Point2<f32>]) -> Vec<Vertex> {
-        let [min_x, max_x] = match self.config.xlim {
-            Some(lim) => lim,
-            None => utils::calc_xlims(points),
+    fn normalize(&mut self, points: &[Point2<f32>]) -> Vec<Vertex> {
+        let [min_x, max_x] = if self.x_dynamic {
+            let xlims = utils::calc_xlims(points);
+            self.config.xlim = Some(xlims);
+            xlims
+        } else {
+            self.config.xlim.unwrap()
         };
-        let [min_y, max_y] = match self.config.ylim {
-            Some(lim) => lim,
-            None => utils::calc_ylims(points),
+        let [min_y, max_y] = if self.y_dynamic {
+            let ylims = utils::calc_ylims(points);
+            self.config.ylim = Some(ylims);
+            ylims
+        } else {
+            self.config.ylim.unwrap()
         };
         let mut vertices = vec![];
         for point in points {

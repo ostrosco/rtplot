@@ -1,6 +1,6 @@
 use num::Complex;
-use rand::distributions::{Distribution, Normal};
 use rand::seq::SliceRandom;
+use rand_distr::{Distribution, Normal};
 use rtplot::{Figure, PlotType};
 use std::f32::consts::PI;
 use std::thread;
@@ -14,7 +14,7 @@ fn generate_symbol() -> Complex<f32> {
     ];
     let mut rng = rand::thread_rng();
     let mut choice = *(symbols.choose(&mut rng).unwrap());
-    let normal = Normal::new(0.0, 0.1);
+    let normal = Normal::new(0.0, 0.1).unwrap();
     choice.re += normal.sample(&mut rng) as f32;
     choice.im += normal.sample(&mut rng) as f32;
     choice
@@ -23,8 +23,8 @@ fn generate_symbol() -> Complex<f32> {
 fn main() {
     let handle = thread::spawn(move || {
         let mut figure = Figure::new(10000)
-            .xlim([-1.0, 1.0])
-            .ylim([-1.0, 1.0])
+            .xlim([-1.5, 1.5])
+            .ylim([-1.5, 1.5])
             .plot_type(PlotType::Dot)
             .color(0x50, 0x20, 0x50);
         Figure::display(&mut figure, |fig| {
