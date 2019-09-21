@@ -1,10 +1,10 @@
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use rtplot::{Figure, PlotType};
 use std::thread;
 
 fn main() {
     let handle = thread::spawn(move || {
-        let normal = Normal::new(0.0, 1.0);
+        let normal = Normal::new(0.0, 1.0).unwrap();
         let mut rng = rand::thread_rng();
         let mut figure = Figure::new(100)
             .ylim([-1.0, 1.0])
