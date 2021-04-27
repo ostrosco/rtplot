@@ -5,12 +5,8 @@ use glium::{self, implement_vertex, Surface};
 use glium_text_rusttype as glium_text;
 use itertools_num::linspace;
 use lyon::math::{point, Point};
-use lyon::tessellation::basic_shapes::{
-    fill_circle, fill_polyline, stroke_polyline, stroke_quad,
-};
-use lyon::tessellation::geometry_builder::{
-    BuffersBuilder, VertexBuffers, VertexConstructor,
-};
+use lyon::tessellation::basic_shapes::{fill_circle, fill_polyline, stroke_polyline, stroke_quad};
+use lyon::tessellation::geometry_builder::{BuffersBuilder, VertexBuffers, VertexConstructor};
 use lyon::tessellation::*;
 use lyon::tessellation::{FillOptions, StrokeOptions};
 
@@ -63,13 +59,8 @@ enum ZDepth {
 }
 
 struct VertexCtor([u8; 3], ZDepth);
-impl VertexConstructor<lyon::tessellation::StrokeVertex, Vertex>
-    for VertexCtor
-{
-    fn new_vertex(
-        &mut self,
-        vertex: lyon::tessellation::StrokeVertex,
-    ) -> Vertex {
+impl VertexConstructor<lyon::tessellation::StrokeVertex, Vertex> for VertexCtor {
+    fn new_vertex(&mut self, vertex: lyon::tessellation::StrokeVertex) -> Vertex {
         let rgb: [f32; 3] = [
             f32::from(self.0[0]) / 255.0,
             f32::from(self.0[1]) / 255.0,
@@ -101,7 +92,7 @@ impl VertexConstructor<lyon::tessellation::FillVertex, Vertex> for VertexCtor {
 }
 
 pub struct Window<'a> {
-    pub events_loop: glium::glutin::EventsLoop,
+    pub events_loop: glium::glutin::event_loop::EventLoop<()>,
     display: glium::Display,
     program: glium::Program,
     draw_parameters: glium::DrawParameters<'a>,
@@ -117,29 +108,23 @@ impl<'a> Default for Window<'a> {
 
 impl<'a> Window<'a> {
     pub fn new() -> Self {
-        let events_loop = glium::glutin::EventsLoop::new();
+        let events_loop = glium::glutin::event_loop::EventLoop::new();
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
             .with_double_buffer(Some(true))
             .with_depth_buffer(24)
             .with_multisampling(2);
-        let window = glium::glutin::WindowBuilder::new()
-            .with_dimensions(LogicalSize {
+        let window = glium::glutin::window::WindowBuilder::new()
+            .with_inner_size(LogicalSize {
                 width: 800.0,
                 height: 800.0,
             })
             .with_decorations(true)
             .with_title("Plot");
 
-        let display =
-            glium::Display::new(window, context, &events_loop).unwrap();
-        let program = glium::Program::from_source(
-            &display,
-            VERTEX_SHADER,
-            FRAGMENT_SHADER,
-            None,
-        )
-        .unwrap();
+        let display = glium::Display::new(window, context, &events_loop).unwrap();
+        let program =
+            glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
         let draw_parameters = glium::DrawParameters {
             depth: glium::Depth {
@@ -188,10 +173,7 @@ impl<'a> Window<'a> {
                     points.iter().cloned(),
                     false,
                     &StrokeOptions::tolerance(0.01).with_line_width(0.002),
-                    &mut BuffersBuilder::new(
-                        &mut mesh,
-                        VertexCtor(config.color, ZDepth::Near),
-                    ),
+                    &mut BuffersBuilder::new(&mut mesh, VertexCtor(config.color, ZDepth::Near)),
                 )
                 .expect("Could not draw line plot");
             }
@@ -201,10 +183,7 @@ impl<'a> Window<'a> {
                         point,
                         0.01,
                         &FillOptions::tolerance(0.01),
-                        &mut BuffersBuilder::new(
-                            &mut mesh,
-                            VertexCtor(config.color, ZDepth::Near),
-                        ),
+                        &mut BuffersBuilder::new(&mut mesh, VertexCtor(config.color, ZDepth::Near)),
                     )
                     .expect("Could not draw dot plot");
                 }
@@ -219,9 +198,8 @@ impl<'a> Window<'a> {
             projection: *ortho,
         };
 
-        let vertex_buffer =
-            glium::VertexBuffer::new(&self.display, &mesh.vertices)
-                .expect("Could not create vertex buffer");
+        let vertex_buffer = glium::VertexBuffer::new(&self.display, &mesh.vertices)
+            .expect("Could not create vertex buffer");
         let indices = glium::IndexBuffer::new(
             &self.display,
             glium::index::PrimitiveType::TrianglesList,
@@ -250,11 +228,7 @@ impl<'a> Window<'a> {
         let aspect = w as f32 / h as f32;
         let ortho_mat = cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0);
         if let Some(text) = config.xlabel {
-            let label = glium_text::TextDisplay::new(
-                &self.text_system,
-                &self.font,
-                text,
-            );
+            let label = glium_text::TextDisplay::new(&self.text_system, &self.font, text);
             let text_width = label.get_width() * 0.1;
             #[rustfmt::skip]
             let matrix = ortho_mat * cgmath::Matrix4::new(
@@ -273,11 +247,7 @@ impl<'a> Window<'a> {
             .expect("Could not draw x label");
         }
         if let Some(text) = config.ylabel {
-            let label = glium_text::TextDisplay::new(
-                &self.text_system,
-                &self.font,
-                text,
-            );
+            let label = glium_text::TextDisplay::new(&self.text_system, &self.font, text);
             let text_width = label.get_width() * 0.1;
             #[rustfmt::skip]
             let matrix = ortho_mat * cgmath::Matrix4::new(
@@ -296,9 +266,7 @@ impl<'a> Window<'a> {
             .expect("Could not draw y label");
         }
         if let Some([xmin, xmax]) = config.xlim {
-            for (coord, tick) in
-                linspace(-0.75, 0.75, 6).zip(linspace(xmin, xmax, 6))
-            {
+            for (coord, tick) in linspace(-0.75, 0.75, 6).zip(linspace(xmin, xmax, 6)) {
                 let tick_str = glium_text::TextDisplay::new(
                     &self.text_system,
                     &self.font,
@@ -323,9 +291,7 @@ impl<'a> Window<'a> {
             }
         }
         if let Some([ymin, ymax]) = config.ylim {
-            for (coord, tick) in
-                linspace(-0.75, 0.75, 5).zip(linspace(ymin, ymax, 5))
-            {
+            for (coord, tick) in linspace(-0.75, 0.75, 5).zip(linspace(ymin, ymax, 5)) {
                 let tick_str = glium_text::TextDisplay::new(
                     &self.text_system,
                     &self.font,
@@ -366,10 +332,7 @@ impl<'a> Window<'a> {
                 .cloned(),
                 &mut tessellator,
                 &FillOptions::tolerance(0.01),
-                &mut BuffersBuilder::new(
-                    mesh,
-                    VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far),
-                ),
+                &mut BuffersBuilder::new(mesh, VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far)),
             )
             .expect("Could not draw grid");
         }
@@ -386,10 +349,7 @@ impl<'a> Window<'a> {
                 .cloned(),
                 &mut tessellator,
                 &FillOptions::tolerance(0.01),
-                &mut BuffersBuilder::new(
-                    mesh,
-                    VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far),
-                ),
+                &mut BuffersBuilder::new(mesh, VertexCtor([0x5d, 0x5d, 0x5d], ZDepth::Far)),
             )
             .expect("Could not draw grid");
         }

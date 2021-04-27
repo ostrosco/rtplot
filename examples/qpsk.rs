@@ -3,7 +3,6 @@ use rand::seq::SliceRandom;
 use rand_distr::{Distribution, Normal};
 use rtplot::{Figure, PlotType};
 use std::f32::consts::PI;
-use std::thread;
 
 fn generate_symbol() -> Complex<f32> {
     let symbols = [
@@ -21,17 +20,13 @@ fn generate_symbol() -> Complex<f32> {
 }
 
 fn main() {
-    let handle = thread::spawn(move || {
-        let mut figure = Figure::new(10000)
-            .xlim([-1.5, 1.5])
-            .ylim([-1.5, 1.5])
-            .plot_type(PlotType::Dot)
-            .color(0x50, 0x20, 0x50);
-        Figure::display(&mut figure, |fig| {
-            let symbol = generate_symbol();
-            fig.plot_complex_stream(&[symbol]);
-        });
+    let mut figure = Figure::new(10000)
+        .xlim([-1.5, 1.5])
+        .ylim([-1.5, 1.5])
+        .plot_type(PlotType::Dot)
+        .color(0x50, 0x20, 0x50);
+    Figure::display(&mut figure, |fig| {
+        let symbol = generate_symbol();
+        fig.plot_complex_stream(&[symbol]);
     });
-
-    handle.join().unwrap();
 }

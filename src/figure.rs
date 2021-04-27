@@ -1,6 +1,7 @@
 use crate::utils;
 use crate::window::{Vertex, Window};
 use cgmath::Point2;
+use glium::glutin::platform::desktop::EventLoopExtDesktop;
 use itertools_num::linspace;
 use num::Complex;
 use slice_deque::SliceDeque;
@@ -84,10 +85,7 @@ impl<'a> Figure<'a> {
 
     /// Create a figure from an existing configuration. Useful if you don't
     /// want to use the builder pattern to initialize a figure from scratch.
-    pub fn new_with_config(
-        config: FigureConfig<'a>,
-        queue_size: usize,
-    ) -> Self {
+    pub fn new_with_config(config: FigureConfig<'a>, queue_size: usize) -> Self {
         let x_dynamic = config.xlim.is_none();
         let y_dynamic = config.ylim.is_none();
         Self {
@@ -148,8 +146,9 @@ impl<'a> Figure<'a> {
 
         let events_loop = &mut self.window.events_loop;
 
-        events_loop.poll_events(|event| {
-            use glium::glutin::{Event, WindowEvent};
+        events_loop.run_return(|event, _, control_flow| {
+            use glium::glutin::event::{Event, WindowEvent};
+            use glium::glutin::event_loop::ControlFlow;
             #[allow(clippy::single_match)]
             match event {
                 Event::WindowEvent { event, .. } => match event {
@@ -160,6 +159,7 @@ impl<'a> Figure<'a> {
                 },
                 _ => (),
             }
+            *control_flow = ControlFlow::Exit;
         });
         should_close_window
     }
@@ -184,11 +184,7 @@ impl<'a> Figure<'a> {
         for point in points {
             // If there are points outside the min and max range, skip over
             // them since we won't draw them anyways.
-            if point.x > max_x
-                || point.x < min_x
-                || point.y > max_y
-                || point.y < min_y
-            {
+            if point.x > max_x || point.x < min_x || point.y > max_y || point.y < min_y {
                 continue;
             }
             let error: f32 = 0.0;
@@ -273,9 +269,7 @@ impl<'a> Figure<'a> {
         T: Into<f32> + Copy,
     {
         if self.complex_samples.len() >= self.queue_size + points.len() {
-            for _ in
-                0..self.complex_samples.len() - self.queue_size + points.len()
-            {
+            for _ in 0..self.complex_samples.len() - self.queue_size + points.len() {
                 self.complex_samples.pop_front();
             }
         }
